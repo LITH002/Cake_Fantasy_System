@@ -61,15 +61,15 @@ const assets = {
 export const category_list = [
     {
         category: "Cake Ingredients",
-        category_image: test_img
+        category_image: cake_ingredients
     },
     {
         category: "Cake Tools",
-        category_image: test_img
+        category_image: cake_tools
     },
     {
         category: "Party Items",
-        category_image: test_img
+        category_image: party_items
     }
 ]
 
