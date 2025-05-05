@@ -3,7 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar/Navbar";
 import Home from "./pages/Home/Home";
 import Cart from "./pages/Cart/Cart";
-import PlacerOrder from "./pages/PlacerOrder/PlaceOrder";
+import PlaceOrder from "./pages/PlacerOrder/PlaceOrder";
 import Footer from "./components/Footer/Footer";
 import LoginPopup from "./components/LoginPopup/LoginPopup";
 import { useState } from "react";
@@ -20,7 +20,7 @@ const App = () => {
         <Routes>
           <Route path='/' element={<Home />} />
           <Route path='/cart' element={<Cart />} />
-          <Route path='/order' element={<PlacerOrder />} />
+          <Route path='/order' element={<PlaceOrder />} />
         </Routes>
       </div>
       <Footer />
