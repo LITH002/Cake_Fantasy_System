@@ -47,30 +47,6 @@ export const createCartTable = async () => {
   }
 };
 
-export const checkAndRemoveCartDataColumn = async () => {
-  try {
-    // Check if column exists
-    const [columns] = await db.query(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'users' 
-      AND COLUMN_NAME = 'cartData'
-    `);
-
-    if (columns.length > 0) {
-      // Column exists - remove it
-      await db.query('ALTER TABLE users DROP COLUMN cartData');
-      console.log('Successfully removed cartData column');
-    } else {
-      console.log('cartData column does not exist - no action needed');
-    }
-  } catch (err) {
-    console.error('Error checking/removing cartData column:', err);
-    throw err;
-  }
-};
-
 // User Operations
 export const User = {
   findByEmail: async (email) => {

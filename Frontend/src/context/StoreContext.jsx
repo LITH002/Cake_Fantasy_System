@@ -31,7 +31,7 @@ const StoreContextProvider = (props) => {
         await axios.post(
           `${url}/api/cart/add`,
           { id: id, quantity: 1 },
-          { headers: { token: token } } // Changed to match backend auth middleware
+          { headers: { token: token } } 
         );
       }
     } catch (err) {
