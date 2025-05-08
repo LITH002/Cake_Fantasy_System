@@ -22,7 +22,7 @@ import facebook from './Facebook.svg';
 import whatsapp from './WhatsApp.svg';
 import location from './Location.svg';
 import cross_icon from './cross_icon.svg';
-import Dum_BPowder_50g from './Dum_B.Powder_50g.jpg';
+import Dum_BPowder_50g from './Dum_B.Powder_50g.png';
 import profile_icon from './profile_icon.svg';
 import logout_icon from './logout_icon.svg';
 import bag_icon from './bag_icon.svg';
