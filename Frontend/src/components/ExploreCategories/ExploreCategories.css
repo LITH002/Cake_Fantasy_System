@@ -30,10 +30,10 @@
 }
 
 .explore-category-list-item img{
-    width: 7.5vw;
-    min-width: 80px;
+    width: 25vw;
+    max-width: 200px;
     cursor: pointer;
-    border-radius: 50%;
+    border-radius: 10%;
     transition: 0.2s;
 }
 
