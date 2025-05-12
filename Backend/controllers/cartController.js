@@ -1,94 +1,207 @@
 import db from "../config/db.js";
 
-// Add items to the user cart
+// Temporary cart management using order_items with status='cart'
 const addToCart = async (req, res) => {
     try {
-        const { userId, id } = req.body;
-        
-        // Check if item already exists in cart
-        const [existing] = await db.query(
-            "SELECT * FROM user_carts WHERE user_id = ? AND item_id = ?",
-            [userId, id]
+        const { item_id, quantity } = req.body;
+        const userId = req.user.id; // From auth middleware
+
+        // Validate input
+        if (!item_id || !quantity) {
+            return res.status(400).json({
+                success: false,
+                message: "Missing item_id or quantity"
+            });
+        }
+
+        // Check if item exists
+        const [item] = await db.query(
+            "SELECT id FROM items WHERE id = ?",
+            [item_id]
         );
+        
+        if (!item.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found"
+            });
+        }
+
+        // Check for existing cart item
+        const [existing] = await db.query(`
+            SELECT oi.id, oi.quantity 
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE o.user_id = ? 
+            AND oi.item_id = ? 
+            AND o.status = 'cart'
+        `, [userId, item_id]);
 
         if (existing.length > 0) {
-            // Increment quantity if exists
-            await db.query(
-                "UPDATE user_carts SET quantity = quantity + 1 WHERE user_id = ? AND item_id = ?",
-                [userId, id]
-            );
+            // Update quantity
+            await db.query(`
+                UPDATE order_items 
+                SET quantity = quantity + ? 
+                WHERE id = ?
+            `, [quantity, existing[0].id]);
         } else {
-            // Add new item with quantity 1
-            await db.query(
-                "INSERT INTO user_carts (user_id, item_id, quantity) VALUES (?, ?, 1)",
-                [userId, id]
-            );
+            // Get or create cart order
+            let [order] = await db.query(`
+                SELECT id FROM orders 
+                WHERE user_id = ? AND status = 'cart'
+                LIMIT 1
+            `, [userId]);
+
+            if (!order.length) {
+                // Create new cart order
+                [order] = await db.query(`
+                    INSERT INTO orders (
+                        user_id, 
+                        amount, 
+                        address,
+                        status,
+                        first_name,
+                        last_name,
+                        contact_number1
+                    ) VALUES (?, 0, '', 'cart', '', '', '')
+                `, [userId]);
+                order = { id: order.insertId };
+            }
+
+            // Add new item to cart
+            await db.query(`
+                INSERT INTO order_items (
+                    order_id, 
+                    item_id, 
+                    quantity, 
+                    price
+                ) SELECT 
+                    ?, 
+                    ?, 
+                    ?, 
+                    price 
+                FROM items 
+                WHERE id = ?
+            `, [order.id, item_id, quantity, item_id]);
         }
 
         res.json({ success: true, message: "Added to cart" });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: "Error adding to cart" });
+        console.error("Cart add error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
-}
+};
 
-// Remove items from the user cart (updated to decrement quantity)
+// Add debugging to removeFromCart
 const removeFromCart = async (req, res) => {
     try {
-        const { userId, itemId } = req.body;
+        const { item_id } = req.body;
+        const userId = req.user.id;
         
-        // 1. Get current quantity
-        const [rows] = await db.query(
-            "SELECT quantity FROM user_carts WHERE user_id = ? AND item_id = ?",
-            [userId, itemId]
-        );
-
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, message: "Item not found in cart" });
+        console.log(`Request to remove item #${item_id} from cart for user #${userId}`);
+        
+        if (!item_id) {
+            console.log("Missing item_id in request");
+            return res.status(400).json({
+                success: false,
+                message: "Item ID is required"
+            });
         }
 
-        const currentQuantity = rows[0].quantity;
-
-        // 2. Decide whether to decrement or remove
-        if (currentQuantity > 1) {
-            // Decrement quantity
-            await db.query(
-                "UPDATE user_carts SET quantity = quantity - 1 WHERE user_id = ? AND item_id = ?",
-                [userId, itemId]
-            );
-            return res.json({ success: true, message: "Quantity reduced by 1" });
-        } else {
-            // Remove item completely
-            await db.query(
-                "DELETE FROM user_carts WHERE user_id = ? AND item_id = ?",
-                [userId, itemId]
-            );
-            return res.json({ success: true, message: "Item removed from cart" });
+        // Find user's cart
+        const [cart] = await db.query(`
+            SELECT o.id 
+            FROM orders o
+            WHERE o.user_id = ? 
+            AND o.status = 'cart'
+            LIMIT 1
+        `, [userId]);
+        
+        if (cart.length === 0) {
+            console.log(`No cart found for user #${userId}`);
+            return res.status(404).json({
+                success: false,
+                message: "Cart not found"
+            });
         }
+        
+        const orderId = cart[0].id;
+        console.log(`Found cart #${orderId} for user #${userId}`);
+
+        // Remove item from cart
+        const [result] = await db.query(`
+            DELETE FROM order_items
+            WHERE order_id = ?
+            AND item_id = ?
+        `, [orderId, item_id]);
+        
+        console.log(`Removed item #${item_id} from cart #${orderId}, affected rows: ${result.affectedRows}`);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found in cart"
+            });
+        }
+
+        res.json({ success: true, message: "Removed from cart" });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: "Error modifying cart" });
+        console.error("Cart remove error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        });
     }
-}
+};
 
-// Fetch user cart data
 const getCart = async (req, res) => {
     try {
-        const { userId } = req.body;
-        
-        const [items] = await db.query(
-            `SELECT uc.item_id, uc.quantity, i.name, i.price, i.image 
-             FROM user_carts uc
-             JOIN items i ON uc.item_id = i.id
-             WHERE uc.user_id = ?`,
-            [userId]
-        );
+        const userId = req.user.id;
 
-        res.json({ success: true, data: items });
+        // Get cart items with details
+        const [items] = await db.query(`
+            SELECT 
+                oi.item_id AS id,
+                i.name,
+                i.image,
+                i.price,
+                oi.quantity,
+                (i.price * oi.quantity) AS total_price
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            JOIN items i ON oi.item_id = i.id
+            WHERE o.user_id = ?
+            AND o.status = 'cart'
+        `, [userId]);
+
+        // Calculate cart total
+        const [total] = await db.query(`
+            SELECT SUM(i.price * oi.quantity) AS total
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            JOIN items i ON oi.item_id = i.id
+            WHERE o.user_id = ?
+            AND o.status = 'cart'
+        `, [userId]);
+
+        res.json({
+            success: true,
+            data: {
+                items,
+                total: total[0].total || 0
+            }
+        });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: "Error fetching cart" });
+        console.error("Cart fetch error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch cart"
+        });
     }
-}
+};
 
 export { addToCart, removeFromCart, getCart };

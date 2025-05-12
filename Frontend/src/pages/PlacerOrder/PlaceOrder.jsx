@@ -1,10 +1,10 @@
-//import React from 'react'
 import { useContext, useState } from "react";
 import "./PlaceOrder.css";
 import { StoreContext } from "../../context/StoreContext";
+import axios from "axios";
 
 const PlaceOrder = () => {
-  const { getTotalCartAmount } = useContext(StoreContext);
+  const { getTotalCartAmount, token, item_list, cartItems, url } = useContext(StoreContext);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -21,12 +21,16 @@ const PlaceOrder = () => {
     contactNumber1: "",
     contactNumber2: ""
   });
+
+  // Submission state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   
   // Location state
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   
-  // Handle form input changes
+  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -34,7 +38,6 @@ const PlaceOrder = () => {
       [name]: value
     });
     
-    // Validate phone numbers as they're entered
     if (name === "contactNumber1" || name === "contactNumber2") {
       validatePhoneNumber(name, value);
     }
@@ -42,14 +45,11 @@ const PlaceOrder = () => {
   
   // Phone number validation
   const validatePhoneNumber = (field, value) => {
-    // Skip validation if field is empty and it's the secondary contact
     if (field === "contactNumber2" && value === "") {
       setErrors(prev => ({ ...prev, [field]: "" }));
       return;
     }
     
-    // Sri Lanka phone number validation
-    // Allows formats like: 0771234567, 071-123-4567, +94 77 123 4567
     const phoneRegex = /^(?:\+94|0)(?:7\d|11|25|26|31|32|33|34|35|36|37|38|41|45|47|51|52|54|55|57|63|65|66|67|81|91|94|)\d{7}$/;
     
     if (!phoneRegex.test(value.replace(/[\s-]/g, ''))) {
@@ -61,12 +61,9 @@ const PlaceOrder = () => {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
-  
-  // Form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Validate required fields
+
+  // Validate form
+  const validateForm = () => {
     let isValid = true;
     const newErrors = { ...errors };
     
@@ -75,21 +72,104 @@ const PlaceOrder = () => {
       isValid = false;
     }
     
-    // If second number is provided, validate it
     if (formData.contactNumber2 && errors.contactNumber2) {
       isValid = false;
     }
     
-    setErrors(newErrors);
+    if (!formData.firstName) {
+      isValid = false;
+    }
     
-    if (isValid) {
-      // Process the order submission
-      console.log("Order form data:", formData);
-      // Proceed with payment logic here
+    if (!formData.lastName) {
+      isValid = false;
+    }
+    
+    if (!formData.address) {
+      isValid = false;
+    }
+    
+    setErrors(newErrors);
+    return isValid;
+  };
+  
+  // Form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError(null);
+    
+    // Validate before submission
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Prepare order items
+      const orderItems = item_list
+        .filter(item => cartItems[item.id] > 0)
+        .map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: cartItems[item.id]
+        }));
+
+        if (orderItems.length === 0) {
+      setSubmitError("Your cart is empty");
+      setIsSubmitting(false);
+      return;
+      }
+    
+      console.log("Order items to send:", orderItems);
+      
+      // Prepare order data
+      const orderData = {
+        userId: token?.userId,
+        items: orderItems,
+        amount: getTotalCartAmount() + 150,
+        address: formData.address,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        contactNumber1: formData.contactNumber1,
+        contactNumber2: formData.contactNumber2 || null,
+        specialInstructions: formData.specialInstructions || null
+      };
+      
+      console.log("Order payload:", orderData);
+      
+      // Submit order
+      const response = await axios.post(
+        `${url}/api/order/place`,
+        orderData,
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+
+      console.log("Order response:", response.data);
+      
+      if (response.data.success && response.data.url) {
+        // Redirect to payment page
+        window.location.href = response.data.url;
+      } else {
+        setSubmitError(response.data.message || "Error initiating payment");
+      }
+    } catch (error) {
+      console.error("Order error:", error);
+      setSubmitError(
+        error.response?.data?.message || 
+        "Failed to place order. Please try again later."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
-  // Fetch location function (unchanged)
+  // Fetch location function
   const fetchLocation = () => {
     setLocationLoading(true);
     setLocationError(null);
@@ -104,36 +184,30 @@ const PlaceOrder = () => {
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
-          
           const response = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`
           );
           
-          if (!response.ok) {
-            throw new Error("Failed to fetch address");
-          }
+          if (!response.ok) throw new Error("Failed to fetch address");
           
           const data = await response.json();
-          
           const addressComponents = data.address;
           const formattedAddress = `${addressComponents.road || ''} ${addressComponents.house_number || ''}, 
-                                    ${addressComponents.suburb || addressComponents.neighbourhood || ''}, 
-                                    ${addressComponents.city || addressComponents.town || addressComponents.village || ''}, 
-                                    ${addressComponents.postcode || ''}`;
+                                ${addressComponents.suburb || addressComponents.neighbourhood || ''}, 
+                                ${addressComponents.city || addressComponents.town || addressComponents.village || ''}, 
+                                ${addressComponents.postcode || ''}`;
           
           setFormData(prev => ({
             ...prev,
             address: formattedAddress.trim()
           }));
-          setLocationLoading(false);
-        } catch (error) {
-          console.error("Error fetching address:", error);
+        } catch {
           setLocationError("Could not retrieve your address. Please enter manually.");
+        } finally {
           setLocationLoading(false);
         }
       },
       (error) => {
-        console.error("Geolocation error:", error);
         setLocationError(`Error getting location: ${error.message}`);
         setLocationLoading(false);
       },
@@ -150,18 +224,18 @@ const PlaceOrder = () => {
           <input 
             type="text" 
             placeholder="First Name" 
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleInputChange}
-            required
+            name="firstName" 
+            value={formData.firstName} 
+            onChange={handleInputChange} 
+            required 
           />
           <input 
             type="text" 
             placeholder="Last Name" 
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleInputChange}
-            required
+            name="lastName" 
+            value={formData.lastName} 
+            onChange={handleInputChange} 
+            required 
           />
         </div>
         
@@ -169,15 +243,15 @@ const PlaceOrder = () => {
           <input 
             type="text" 
             placeholder="Address" 
-            name="address"
-            value={formData.address}
-            onChange={handleInputChange}
-            required
+            name="address" 
+            value={formData.address} 
+            onChange={handleInputChange} 
+            required 
           />
           <button 
             type="button" 
             className="location-btn" 
-            onClick={fetchLocation}
+            onClick={fetchLocation} 
             disabled={locationLoading}
           >
             {locationLoading ? "Getting Location..." : "Get My Location"}
@@ -190,12 +264,12 @@ const PlaceOrder = () => {
           <input 
             type="text" 
             placeholder="Contact Number 1" 
-            name="contactNumber1"
-            value={formData.contactNumber1}
-            onChange={handleInputChange}
-            required
+            name="contactNumber1" 
+            value={formData.contactNumber1} 
+            onChange={handleInputChange} 
+            required 
             className={errors.contactNumber1 ? "input-error" : ""}
-          />
+          /> 
           {errors.contactNumber1 && <p className="error-message">{errors.contactNumber1}</p>}
         </div>
         
@@ -203,9 +277,9 @@ const PlaceOrder = () => {
           <input 
             type="text" 
             placeholder="Contact Number 2 (Optional)" 
-            name="contactNumber2"
-            value={formData.contactNumber2}
-            onChange={handleInputChange}
+            name="contactNumber2" 
+            value={formData.contactNumber2} 
+            onChange={handleInputChange} 
             className={errors.contactNumber2 ? "input-error" : ""}
           />
           {errors.contactNumber2 && <p className="error-message">{errors.contactNumber2}</p>}
@@ -219,13 +293,13 @@ const PlaceOrder = () => {
             onChange={handleInputChange}
             rows="3"
             className="special-instructions"
-          ></textarea>
+          />
         </div>
       </div>
 
       <div className="place-order-right">
         <div className="cart-total">
-          <h2>Card Total</h2>
+          <h2>Cart Total</h2>
           <div>
             <div className="card-total-details">
               <p>Subtotal</p>
@@ -234,19 +308,26 @@ const PlaceOrder = () => {
             <hr />
             <div className="card-total-details">
               <p>Delivery Fee</p>
-              <p>LKR {getTotalCartAmount()===0?0:150}</p>
+              <p>LKR {getTotalCartAmount() === 0 ? 0 : 150}</p>
             </div>
             <hr />
             <div className="card-total-details">
               <b>Total</b>
-              <b>LKR {getTotalCartAmount()===0?0:getTotalCartAmount()+150}</b>
+              <b>LKR {getTotalCartAmount() === 0 ? 0 : getTotalCartAmount() + 150}</b>
             </div>
           </div>
+          
+          {submitError && <p className="error-message">{submitError}</p>}
+          
           <button 
             type="submit" 
-            disabled={getTotalCartAmount() === 0 || Object.values(errors).some(error => error)}
+            disabled={
+              getTotalCartAmount() === 0 || 
+              Object.values(errors).some(error => error) ||
+              isSubmitting 
+            }
           >
-            PROCEED TO PAYMENT
+            {isSubmitting ? "Processing..." : "PROCEED TO PAYMENT"}
           </button>
         </div>
       </div>
