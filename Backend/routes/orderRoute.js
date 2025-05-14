@@ -1,7 +1,7 @@
 import express from 'express';
 import { Order } from '../models/orderModel.js';
 import authMiddleware from '../middleware/auth.js';
-import { placeOrder, verifyOrder } from '../controllers/orderController.js';
+import { placeOrder, userOrders, verifyOrder } from '../controllers/orderController.js';
 
 const router = express.Router();
 
@@ -19,7 +19,7 @@ router.post("/place", authMiddleware, (req, res, next) => {
 // Verify payment (for payment gateways)
 router.post("/verify", verifyOrder);
 
-// Get order history
+// Get order history (simple list)
 router.get("/history", authMiddleware, async (req, res) => {
     try {
         const orders = await Order.findByUserId(req.user.id);
@@ -35,6 +35,9 @@ router.get("/history", authMiddleware, async (req, res) => {
         });
     }
 });
+
+// Get user orders with full details
+router.get("/user/orders", authMiddleware, userOrders);
 
 // Get order details
 router.get("/:orderId", authMiddleware, async (req, res) => {

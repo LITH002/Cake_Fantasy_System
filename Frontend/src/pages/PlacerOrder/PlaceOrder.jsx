@@ -1,7 +1,8 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import "./PlaceOrder.css";
 import { StoreContext } from "../../context/StoreContext";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const PlaceOrder = () => {
   const { getTotalCartAmount, token, item_list, cartItems, url } = useContext(StoreContext);
@@ -122,10 +123,24 @@ const PlaceOrder = () => {
       }
     
       console.log("Order items to send:", orderItems);
+
+      // Extract userId from token
+      let userId = null;
+      if (token) {
+        try {
+          // Parse JWT token to get user ID
+          const tokenPayload = token.split('.')[1];
+          const decodedPayload = JSON.parse(atob(tokenPayload));
+          userId = decodedPayload.id;
+          console.log("Extracted user ID from token:", userId);
+        } catch (err) {
+          console.error("Failed to extract user ID from token:", err);
+        }
+      }
       
       // Prepare order data
       const orderData = {
-        userId: token?.userId,
+        userId: userId,
         items: orderItems,
         amount: getTotalCartAmount() + 150,
         address: formData.address,
@@ -214,6 +229,16 @@ const PlaceOrder = () => {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!token) {
+      navigate('/cart');
+    } else if (getTotalCartAmount() === 0) {
+      navigate('/cart');
+    }
+  },[token])
 
   return (
     <form className="place-order" onSubmit={handleSubmit}>

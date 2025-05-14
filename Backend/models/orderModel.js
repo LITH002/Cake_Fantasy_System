@@ -45,9 +45,7 @@ const createOrderTables = async () => {
 
 // Order operations
 const Order = {
-  /**
-   * Get or create cart order for user
-   */
+  // Get or create cart order for user
   getCartOrder: async (userId) => {
     const connection = await db.getConnection();
     try {
@@ -84,9 +82,7 @@ const Order = {
     }
   },
 
-  /**
-   * Add item to cart/order
-   */
+  // Add item to cart/order
   addItem: async (userId, itemId, quantity = 1) => {
     const connection = await db.getConnection();
     try {
@@ -121,9 +117,7 @@ const Order = {
     }
   },
 
-  /**
-   * Remove item from cart
-   */
+  // Remove item from cart
   removeItem: async (userId, itemId) => {
     const connection = await db.getConnection();
     try {
@@ -153,9 +147,7 @@ const Order = {
     }
   },
 
-  /**
-   * Get cart items for user
-   */
+  // Get cart items for user
   getCart: async (userId) => {
     try {
       const [order] = await db.query(
@@ -186,9 +178,7 @@ const Order = {
     }
   },
 
-  /**
-   * Clear cart
-   */
+  // Clear cart
   clearCart: async (userId) => {
     try {
       const [order] = await db.query(
@@ -211,10 +201,7 @@ const Order = {
     }
   },
 
-  /**
-   * Create a new order
-   */
-  // Update the create method
+  // Create a new order
 create: async (userId, items, amount, address, firstName, lastName, contactNumber1, contactNumber2, specialInstructions) => {
   const connection = await db.getConnection();
   try {
@@ -280,9 +267,7 @@ create: async (userId, items, amount, address, firstName, lastName, contactNumbe
   }
 },
 
-  /**
-   * Checkout a cart
-   */
+  // Checkout a cart
   checkout: async (userId, orderDetails) => {
     const connection = await db.getConnection();
     try {
@@ -348,9 +333,7 @@ create: async (userId, items, amount, address, firstName, lastName, contactNumbe
     }
   },
 
-  /**
-   * Update payment status
-   */
+  // Update payment status
   updatePaymentStatus: async (orderId, status) => {
     try {
       await db.query(
@@ -364,49 +347,50 @@ create: async (userId, items, amount, address, firstName, lastName, contactNumbe
     }
   },
 
-  /**
-   * Find order by ID
-   */
-  findById: async (orderId) => {
-    try {
-      const [orders] = await db.query(`
-        SELECT o.*, 
-          (SELECT JSON_ARRAYAGG(
-            JSON_OBJECT(
-              'id', oi.id,
-              'item_id', oi.item_id,
-              'name', i.name,
-              'price', oi.price,
-              'quantity', oi.quantity
-            )
-          ) FROM order_items oi 
-          JOIN items i ON oi.item_id = i.id
-          WHERE oi.order_id = o.id) as items
-        FROM orders o 
-        WHERE o.id = ? 
-        LIMIT 1
-      `, [orderId]);
-      
-      if (!orders.length) {
-        return null;
-      }
-      
-      const order = orders[0];
-      
-      // Parse JSON string to array
-      if (order.items) {
-        order.items = JSON.parse(order.items);
-      }
-      
-      return order;
-    } catch (error) {
-      throw error;
+  // Find order by ID
+findById: async (orderId) => {
+  try {
+    console.log(`Finding order by ID: ${orderId}`);
+    
+    // First get the basic order info
+    const [orders] = await db.query(`
+      SELECT * FROM orders WHERE id = ? LIMIT 1
+    `, [orderId]);
+    
+    if (!orders.length) {
+      console.log(`Order ${orderId} not found`);
+      return null;
     }
-  },
+    
+    const order = orders[0];
+    console.log(`Found basic info for order ${orderId}`);
+    
+    // Then get the order items separately
+    const [items] = await db.query(`
+      SELECT 
+        oi.id, 
+        oi.item_id, 
+        i.name, 
+        oi.price, 
+        oi.quantity
+      FROM order_items oi
+      LEFT JOIN items i ON oi.item_id = i.id
+      WHERE oi.order_id = ?
+    `, [orderId]);
+    
+    console.log(`Found ${items.length} items for order ${orderId}`);
+    
+    // Add items to the order object
+    order.items = items;
+    
+    return order;
+  } catch (error) {
+    console.error(`Error in findById for order ${orderId}:`, error);
+    throw error;
+  }
+},
 
-  /**
-   * Find orders by user ID
-   */
+  //Find orders by user ID
   findByUserId: async (userId) => {
     try {
       const [orders] = await db.query(`

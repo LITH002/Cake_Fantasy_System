@@ -137,4 +137,50 @@ const verifyOrder = async (req, res) => {
   }
 };
 
-export { placeOrder, verifyOrder };
+//User orders for the frontend
+const userOrders = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`Fetching orders for user ${userId}`);
+
+    // Get all orders for this user
+    const orders = await Order.findByUserId(userId);
+    
+    // For each order, get detailed information including items
+    const detailedOrders = await Promise.all(
+      orders.map(async (order) => {
+        const fullOrder = await Order.findById(order.id);
+        return {
+          id: fullOrder.id,
+          amount: fullOrder.amount,
+          address: fullOrder.address,
+          status: fullOrder.status,
+          payment: fullOrder.payment,
+          firstName: fullOrder.first_name,
+          lastName: fullOrder.last_name,
+          contactNumber1: fullOrder.contact_number1,
+          contactNumber2: fullOrder.contact_number2,
+          specialInstructions: fullOrder.special_instructions,
+          created_at: fullOrder.created_at,
+          updated_at: fullOrder.updated_at,
+          items: fullOrder.items || []
+        };
+      })
+    );
+    
+    console.log(`Found ${detailedOrders.length} orders for user ${userId}`);
+    
+    res.json({
+      success: true,
+      data: detailedOrders
+    });
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve orders"
+    });
+  }
+};
+
+export { placeOrder, verifyOrder, userOrders };
