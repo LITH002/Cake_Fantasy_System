@@ -37,7 +37,9 @@ const Cart = () => {
               </div>
             );
           }
-        }) || <p>Your cart is empty</p>}
+          return null; // Explicit return null for items not in cart
+        })} 
+        {Object.keys(cartItems).length === 0 && <p>Your cart is empty</p>}
       </div>
       <div className="cart-bottom">
         <div className="cart-total">

@@ -30,14 +30,25 @@ const LoginPopup = ({setShowLogin}) => {
             newUrl += "/api/user/register"
         }
 
-        const response = await axios.post (newUrl,data);
-
+        try {
+        const response = await axios.post(newUrl, data);
+        
         if (response.data.success) {
-            setToken (response.data.token);
-            localStorage.setItem ("token",response.data.token);
+            // Standardize token storage
+            const authToken = response.data.token;
+            setToken(authToken);
+            localStorage.setItem("token", authToken);
+            
+            // Set default Authorization header for future requests
+            axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+            
             setShowLogin(false);
         } else {
-            alert (response.data.message);
+            alert(response.data.message);
+        }
+        } catch (error) {
+            console.error("Login error:", error);
+            alert(error.response?.data?.message || "Login failed");
         }
     }
 

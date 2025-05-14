@@ -23,12 +23,12 @@
     padding: 10px;
     border: 1px solid #c5c5c5;
     border-radius: 4px;
-    outline-color: #591b0d;
+    /* outline-color: #591b0d; */
 }
 
 .place-order-left .multi-fields{
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 .place-order-right{
@@ -39,3 +39,51 @@
 .place-order .cart-total button{
 margin-top: 25px;
 }
+
+.address-field {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .address-field input {
+    flex-grow: 1;
+  }
+  
+  .location-btn {
+    background-color: green;
+    color: white;
+    border: none;
+    padding:5px 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 14px;
+    transition: background-color 0.3s;
+  }
+  
+  .location-btn:hover {
+    background-color: #45a049;
+  }
+  
+  .location-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .error-message {
+    color: #f44336;
+    font-size: 14px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+  }
+
+  .special-instructions {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    resize: vertical;
+  } 

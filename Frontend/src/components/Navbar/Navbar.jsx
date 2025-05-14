@@ -3,6 +3,7 @@ import './Navbar.css'
 import assets from '../../assets/assets'
 import { Link, useNavigate } from 'react-router-dom'
 import { StoreContext } from '../../context/StoreContext'
+import axios from 'axios'
 
 const Navbar = ({setShowLogin}) => {
 
@@ -14,6 +15,7 @@ const Navbar = ({setShowLogin}) => {
 
   const logout = () => {
     localStorage.removeItem("token");
+     delete axios.defaults.headers.common['Authorization'];
     setToken("");
     navigate("/");
   }
@@ -36,7 +38,11 @@ const Navbar = ({setShowLogin}) => {
         :<div className='navbar-profile'>
           <img className='profile-icon' src={assets.profile_icon} alt="" />
           <ul className='nav-profile-dropdown'>
-            <li><img src={assets.bag_icon} alt=""/><p>Orders</p></li>
+            <li>
+              <Link to='/myorders'>
+                <li><img src={assets.bag_icon} alt=""/><p>Orders</p></li>
+              </Link>
+            </li>
             <hr />
             <li onClick={logout}><img src={assets.logout_icon} alt=""/><p>Logout</p></li>
           </ul>

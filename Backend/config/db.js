@@ -1,28 +1,36 @@
-import mysql from 'mysql2/promise'; // ← Change this import
-import dotenv from 'dotenv';
+import mysql from 'mysql2/promise';
+import 'dotenv/config';
 
-dotenv.config();
-
-// Create MySQL connection pool (better than single connection)
-const db = mysql.createPool({
-    host: "localhost",
-    port: 3306,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0
+// Add detailed error logging
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASS || '',
+  database: process.env.DB_NAME || 'cake_fantasy',
+  waitForConnections: true,
+  connectionLimit: 20, // Increase connection limit
+  queueLimit: 0,
+  debug: process.env.NODE_ENV === 'development' // Enable SQL debugging in dev
 });
 
-// Test connection
-db.getConnection()
-  .then((connection) => {
-    console.log("Connected to MySQL via XAMPP");
-    connection.release();
+// Test connection on startup
+pool.getConnection()
+  .then(connection => {
+    console.log(`Connected to MySQL database: ${process.env.DB_NAME}`);
+    // Test basic query
+    return connection.query('SELECT 1+1 AS result')
+      .then(([rows]) => {
+        console.log('Database query test successful:', rows[0].result);
+        connection.release();
+      });
   })
-  .catch((err) => {
-    console.error("Database connection failed:", err);
+  .catch(err => {
+    console.error('Database connection error:', err);
+    console.error('Database config:', {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      database: process.env.DB_NAME
+    });
   });
 
-export default db;
+export default pool;
