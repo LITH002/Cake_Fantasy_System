@@ -1,57 +1,54 @@
 import db from "../config/db.js";
-import fs from "fs";
-import { promisify } from "util";
-
-// Convert callback-based functions to promises
-const unlinkAsync = promisify(fs.unlink);
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
 
 // Add Item
 const addItem = async (req, res) => {
     try {
         const { name, description, price, category } = req.body;
-        const image_filename = req.file?.filename;
 
-        if (!name || !description || !price || !category || !image_filename) {
+        if (!name || !description || !price || !category || !req.file) {
             return res.status(400).json({ 
                 success: false,
                 message: "All fields are required" 
             });
         }
 
+        // Upload image to Cloudinary
+        const imageResult = await uploadToCloudinary(req.file.buffer);
+
+        // Save Cloudinary details in the database
         const [result] = await db.query(
-            "INSERT INTO items (name, description, price, image, category) VALUES (?, ?, ?, ?, ?)",
-            [name, description, price, image_filename, category]
+            "INSERT INTO items (name, description, price, image, category, cloudinary_id) VALUES (?, ?, ?, ?, ?, ?)",
+            [name, description, price, imageResult.secure_url, category, imageResult.public_id]
         );
 
         res.status(201).json({ 
             success: true,
             message: "Item added successfully", 
-            itemId: result.insertId 
+            itemId: result.insertId,
+            imageUrl: imageResult.secure_url
         });
 
     } catch (error) {
         console.error("Error adding item:", error);
         res.status(500).json({ 
             success: false,
-            message: "Internal server error",
+            message: "Error adding item",
             error: error.message 
         });
     }
 };
 
-// List All Items
+// List Items
 const listItem = async (req, res) => {
     try {
         const [results] = await db.query("SELECT * FROM items");
-        res.json({ 
-            success: true, 
-            data: results 
-        });
+        res.json({ success: true, data: results });
     } catch (error) {
-        console.error("Error fetching items:", error);
+        console.error("Error listing items:", error);
         res.status(500).json({ 
             success: false,
-            message: "Error fetching items",
+            message: "Error listing items",
             error: error.message 
         });
     }
@@ -60,7 +57,7 @@ const listItem = async (req, res) => {
 // Remove Item
 const removeItem = async (req, res) => {
     try {
-        const itemId = req.body.id;
+        const itemId = req.body.item_id;
 
         if (!itemId) {
             return res.status(400).json({ 
@@ -69,24 +66,29 @@ const removeItem = async (req, res) => {
             });
         }
 
-        // Get the item's image filename
-        const [results] = await db.query("SELECT image FROM items WHERE id = ?", [itemId]);
-        
-        if (results.length === 0) {
+        // Get the item to find its Cloudinary ID
+        const [items] = await db.query(
+            "SELECT cloudinary_id FROM items WHERE id = ?", 
+            [itemId]
+        );
+
+        if (!items.length) {
             return res.status(404).json({ 
                 success: false, 
                 message: "Item not found" 
             });
         }
 
-        const image_filename = results[0].image;
+        const cloudinary_id = items[0].cloudinary_id;
 
-        // Delete the image file if it exists
-        try {
-            await unlinkAsync(`uploads/${image_filename}`);
-        } catch (unlinkErr) {
-            if (unlinkErr.code !== "ENOENT") { // Ignore "file not found" errors
-                console.error("Error deleting image:", unlinkErr);
+        // Delete from Cloudinary if we have an ID
+        if (cloudinary_id) {
+            try {
+                await deleteFromCloudinary(cloudinary_id);
+                console.log(`Deleted image ${cloudinary_id} from Cloudinary`);
+            } catch (cloudinaryErr) {
+                console.error("Error deleting from Cloudinary:", cloudinaryErr);
+                // Continue with deletion even if Cloudinary fails
             }
         }
 

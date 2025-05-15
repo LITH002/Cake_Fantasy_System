@@ -3,12 +3,13 @@ import cors from "cors";
 import db from "./config/db.js";
 import itemRouter from "./routes/itemRoute.js";
 import { initializeTables as userTables } from "./models/userModel.js";
-import createItemTable from "./models/itemModel.js";
+import createItemTable  from "./models/itemModel.js";
 import userRouter from "./routes/userRoute.js";
 import 'dotenv/config';
 import cartRouter from "./routes/cartRoute.js";
 import orderRouter from "./routes/orderRoute.js";
 import { createOrderTables } from "./models/orderModel.js";
+import connectCloudinary from "./config/cloudinary.js";
 
 const app = express();
 const port = 4000;
@@ -37,6 +38,7 @@ app.use("/api/order", orderRouter);
 // Async server startup
 const startServer = async () => {
   try {
+    connectCloudinary();
     await Promise.all([
       userTables(),
       createItemTable(),

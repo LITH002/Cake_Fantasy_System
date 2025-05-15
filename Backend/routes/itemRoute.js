@@ -1,48 +1,18 @@
 import express from "express";
 import { addItem, listItem, removeItem } from "../controllers/itemController.js"; 
 import multer from "multer";
-import path from "path";
-import fs from "fs";
-import { promisify } from "util";
+import connectCloudinary from "../config/cloudinary.js";
 
 const itemRouter = express.Router();
 
-// Convert fs methods to promise-based
-const existsAsync = promisify(fs.exists);
-const mkdirAsync = promisify(fs.mkdir);
+// Initialize Cloudinary
+connectCloudinary();
 
-// Async initialization of uploads directory
-const initUploadsDir = async () => {
-  try {
-    const uploadDir = "uploads";
-    const dirExists = await existsAsync(uploadDir);
-    
-    if (!dirExists) {
-      await mkdirAsync(uploadDir, { recursive: true });
-      console.log("Uploads directory created");
-    }
-  } catch (err) {
-    console.error("Error initializing uploads directory:", err);
-    process.exit(1); // Critical failure - exit if we can't create uploads dir
-  }
-};
+// Configure multer for memory storage instead of disk storage
+// This allows us to get the buffer to upload to Cloudinary
+const storage = multer.memoryStorage();
 
-// Initialize uploads directory when server starts
-initUploadsDir();
-
-// Image Storage Engine
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-  }
-});
-
-// File filter and limits
+// File filter
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
   if (!allowedTypes.includes(file.mimetype)) {
