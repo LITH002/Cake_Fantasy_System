@@ -202,70 +202,70 @@ const Order = {
   },
 
   // Create a new order
-create: async (userId, items, amount, address, firstName, lastName, contactNumber1, contactNumber2, specialInstructions) => {
-  const connection = await db.getConnection();
-  try {
-    await connection.beginTransaction();
-    
-    console.log(`Creating order for user ${userId} with ${items.length} items, total: ${amount}`);
-    
-    // Create order
-    const [orderResult] = await connection.query(
-      `INSERT INTO orders (
-        user_id, amount, address, status, payment, first_name, last_name, contact_number1, contact_number2, special_instructions
-      ) VALUES (?, ?, ?, 'Item Processing', false, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        amount,
-        address,
-        firstName,
-        lastName,
-        contactNumber1,
-        contactNumber2 || null,
-        specialInstructions || null
-      ]
-    );
-    
-    const orderId = orderResult.insertId;
-    console.log(`Created order #${orderId}, now adding items`);
-    
-    // Add order items - catching errors for individual items
-    for (const item of items) {
-      try {
-        console.log(`Adding item #${item.id} x${item.quantity} to order #${orderId}`);
-        await connection.query(
-          `INSERT INTO order_items (order_id, item_id, quantity, price) 
-           VALUES (?, ?, ?, ?)`,
-          [
-            orderId,
-            item.id,
-            item.quantity,
-            item.price
-          ]
-        );
-      } catch (itemError) {
-        console.error(`Failed to add item #${item.id} to order:`, itemError);
-        // Continue with other items instead of failing the entire order
-      }
-    }
-    
-    console.log(`Order #${orderId} created successfully, committing transaction`);
-    await connection.commit();
-    return orderId;
-  } catch (error) {
-    console.error("Error creating order:", error);
+  create: async (userId, items, amount, address, firstName, lastName, contactNumber1, contactNumber2, specialInstructions) => {
+    const connection = await db.getConnection();
     try {
-      await connection.rollback();
-      console.log("Transaction rolled back due to error");
-    } catch (rollbackError) {
-      console.error("Rollback failed:", rollbackError);
+      await connection.beginTransaction();
+      
+      console.log(`Creating order for user ${userId} with ${items.length} items, total: ${amount}`);
+      
+      // Create order
+      const [orderResult] = await connection.query(
+        `INSERT INTO orders (
+          user_id, amount, address, status, payment, first_name, last_name, contact_number1, contact_number2, special_instructions
+        ) VALUES (?, ?, ?, 'Item Processing', false, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          amount,
+          address,
+          firstName,
+          lastName,
+          contactNumber1,
+          contactNumber2 || null,
+          specialInstructions || null
+        ]
+      );
+      
+      const orderId = orderResult.insertId;
+      console.log(`Created order #${orderId}, now adding items`);
+      
+      // Add order items - catching errors for individual items
+      for (const item of items) {
+        try {
+          console.log(`Adding item #${item.id} x${item.quantity} to order #${orderId}`);
+          await connection.query(
+            `INSERT INTO order_items (order_id, item_id, quantity, price) 
+             VALUES (?, ?, ?, ?)`,
+            [
+              orderId,
+              item.id,
+              item.quantity,
+              item.price
+            ]
+          );
+        } catch (itemError) {
+          console.error(`Failed to add item #${item.id} to order:`, itemError);
+          // Continue with other items instead of failing the entire order
+        }
+      }
+      
+      console.log(`Order #${orderId} created successfully, committing transaction`);
+      await connection.commit();
+      return orderId;
+    } catch (error) {
+      console.error("Error creating order:", error);
+      try {
+        await connection.rollback();
+        console.log("Transaction rolled back due to error");
+      } catch (rollbackError) {
+        console.error("Rollback failed:", rollbackError);
+      }
+      throw error;
+    } finally {
+      connection.release();
+      console.log("Database connection released");
     }
-    throw error;
-  } finally {
-    connection.release();
-    console.log("Database connection released");
-  }
-},
+  },
 
   // Checkout a cart
   checkout: async (userId, orderDetails) => {
@@ -348,56 +348,59 @@ create: async (userId, items, amount, address, firstName, lastName, contactNumbe
   },
 
   // Find order by ID
-findById: async (orderId) => {
-  try {
-    console.log(`Finding order by ID: ${orderId}`);
-    
-    // First get the basic order info
-    const [orders] = await db.query(`
-      SELECT * FROM orders WHERE id = ? LIMIT 1
-    `, [orderId]);
-    
-    if (!orders.length) {
-      console.log(`Order ${orderId} not found`);
-      return null;
+  findById: async (orderId) => {
+    try {
+      console.log(`Finding order by ID: ${orderId}`);
+      
+      // First get the basic order info
+      const [orders] = await db.query(`
+        SELECT * FROM orders WHERE id = ? LIMIT 1
+      `, [orderId]);
+      
+      if (!orders.length) {
+        console.log(`Order ${orderId} not found`);
+        return null;
+      }
+      
+      const order = orders[0];
+      console.log(`Found basic info for order ${orderId}`);
+      
+      // Then get the order items separately
+      const [items] = await db.query(`
+        SELECT 
+          oi.id, 
+          oi.item_id, 
+          i.name, 
+          oi.price, 
+          oi.quantity
+        FROM order_items oi
+        LEFT JOIN items i ON oi.item_id = i.id
+        WHERE oi.order_id = ?
+      `, [orderId]);
+      
+      console.log(`Found ${items.length} items for order ${orderId}`);
+      
+      // Add items to the order object
+      order.items = items;
+      
+      return order;
+    } catch (error) {
+      console.error(`Error in findById for order ${orderId}:`, error);
+      throw error;
     }
-    
-    const order = orders[0];
-    console.log(`Found basic info for order ${orderId}`);
-    
-    // Then get the order items separately
-    const [items] = await db.query(`
-      SELECT 
-        oi.id, 
-        oi.item_id, 
-        i.name, 
-        oi.price, 
-        oi.quantity
-      FROM order_items oi
-      LEFT JOIN items i ON oi.item_id = i.id
-      WHERE oi.order_id = ?
-    `, [orderId]);
-    
-    console.log(`Found ${items.length} items for order ${orderId}`);
-    
-    // Add items to the order object
-    order.items = items;
-    
-    return order;
-  } catch (error) {
-    console.error(`Error in findById for order ${orderId}:`, error);
-    throw error;
-  }
-},
+  },
 
-  //Find orders by user ID
+  // Find orders by user ID
   findByUserId: async (userId) => {
     try {
       const [orders] = await db.query(`
         SELECT 
           o.id,
           o.amount,
-          o.status,
+          CASE 
+            WHEN o.status = 'processing' THEN 'Item Processing'
+            ELSE o.status 
+          END AS status,
           o.payment,
           o.created_at,
           o.updated_at,
@@ -409,6 +412,196 @@ findById: async (orderId) => {
       
       return orders;
     } catch (error) {
+      throw error;
+    }
+  },
+
+  // List all orders for admin
+    // List all orders for admin
+  listAll: async ({ status, payment, sort = 'created_at', order = 'desc', page = 1, limit = 20 }) => {
+    try {
+      // Build the WHERE clause based on filters
+      const whereConditions = [];
+      const params = [];
+      
+      if (status) {
+        whereConditions.push('o.status = ?');
+        params.push(status);
+      }
+      
+      // Only add cart filter if status isn't explicitly provided
+      if (!status) {
+        whereConditions.push("o.status != 'cart'");
+      }
+      
+      if (payment !== undefined) {
+        whereConditions.push('o.payment = ?');
+        params.push(payment);
+      }
+      
+      const whereClause = whereConditions.length > 0 
+        ? 'WHERE ' + whereConditions.join(' AND ')
+        : '';
+      
+      // Build the ORDER BY clause
+      const orderClause = `ORDER BY o.${sort} ${order.toUpperCase()}`;
+      
+      // Add pagination
+      const offset = (page - 1) * limit;
+      const paginationClause = `LIMIT ${limit} OFFSET ${offset}`;
+      
+      // Execute the query - REMOVED username from select and the JOIN with users
+      const [orders] = await db.query(
+        `SELECT 
+          o.id,
+          o.user_id,
+          o.amount,
+          o.status,
+          o.payment,
+          o.first_name,
+          o.last_name,
+          o.contact_number1,
+          o.created_at,
+          o.updated_at,
+          COUNT(oi.id) as item_count,
+          SUM(oi.quantity) as total_items
+        FROM orders o
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        ${whereClause}
+        GROUP BY o.id
+        ${orderClause}
+        ${paginationClause}`,
+        params
+      );
+      
+      return orders;
+    } catch (error) {
+      console.error("Error in Order.listAll:", error);
+      throw error;
+    }
+  },
+
+    // Count all orders for pagination
+  countAll: async ({ status, payment }) => {
+    try {
+      // Build the WHERE clause based on filters
+      const whereConditions = [];
+      const params = [];
+      
+      if (status) {
+        whereConditions.push('o.status = ?');
+        params.push(status);
+      }
+      
+      // Only add cart filter if status isn't explicitly provided
+      if (!status) {
+        whereConditions.push("o.status != 'cart'");
+      }
+      
+      if (payment !== undefined) {
+        whereConditions.push('o.payment = ?');
+        params.push(payment);
+      }
+      
+      const whereClause = whereConditions.length > 0 
+        ? 'WHERE ' + whereConditions.join(' AND ')
+        : '';
+      
+      // Execute the query
+      const [result] = await db.query(
+        `SELECT COUNT(DISTINCT o.id) as total
+         FROM orders o
+         ${whereClause}`,
+        params
+      );
+      
+      return result[0].total;
+    } catch (error) {
+      console.error("Error in Order.countAll:", error);
+      throw error;
+    }
+  },
+
+  // Update order status
+  updateStatus: async (orderId, status) => {
+    try {
+      // Validate status
+      const validStatuses = ['Item Processing', 'Out for Delivery', 'Delivered', 'Cancelled'];
+      if (!validStatuses.includes(status)) {
+        throw new Error('Invalid status');
+      }
+      
+      const [result] = await db.query(
+        'UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?',
+        [status, orderId]
+      );
+      
+      if (result.affectedRows === 0) {
+        throw new Error('Order not found');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error in Order.updateStatus:", error);
+      throw error;
+    }
+  },
+
+  // Get order statistics for admin dashboard
+  getStats: async () => {
+    try {
+      // Get total orders count
+      const [totalOrders] = await db.query(
+        `SELECT COUNT(*) as count FROM orders WHERE status != 'cart'`
+      );
+
+      // Get pending orders count
+      const [pendingOrders] = await db.query(
+        `SELECT COUNT(*) as count FROM orders WHERE status = 'Item Processing'`
+      );
+
+      // Get orders by status count
+      const [ordersByStatus] = await db.query(`
+        SELECT status, COUNT(*) as count 
+        FROM orders 
+        WHERE status != 'cart' 
+        GROUP BY status
+      `);
+
+      // Get daily orders for the last 7 days
+      const [dailyOrders] = await db.query(`
+        SELECT 
+          DATE(created_at) as date, 
+          COUNT(*) as count,
+          SUM(amount) as revenue
+        FROM orders 
+        WHERE 
+          status != 'cart' AND
+          created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY date
+      `);
+
+      // Get payment statistics
+      const [paymentStats] = await db.query(`
+        SELECT 
+          payment,
+          COUNT(*) as count,
+          SUM(amount) as total
+        FROM orders
+        WHERE status != 'cart'
+        GROUP BY payment
+      `);
+
+      return {
+        totalOrders: totalOrders[0].count,
+        pendingOrders: pendingOrders[0].count,
+        ordersByStatus,
+        dailyOrders,
+        paymentStats
+      };
+    } catch (error) {
+      console.error("Error getting order stats:", error);
       throw error;
     }
   }

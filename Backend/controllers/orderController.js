@@ -183,4 +183,50 @@ const userOrders = async (req, res) => {
   }
 };
 
-export { placeOrder, verifyOrder, userOrders };
+//Listing orders for the Admin Panel
+const listOrders = async (req, res) => {
+  try {
+    // Get query parameters for filtering
+    const { status, payment, sort = 'created_at', order = 'desc', page = 1, limit = 20 } = req.query;
+    
+    console.log(`Admin fetching orders with filters: status=${status}, payment=${payment}`);
+    
+    // Get orders with optional filters
+    const orders = await Order.listAll({
+      status,
+      payment: payment === 'true' ? true : payment === 'false' ? false : undefined,
+      sort,
+      order,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+    
+    // Get total count for pagination
+    const total = await Order.countAll({
+      status,
+      payment: payment === 'true' ? true : payment === 'false' ? false : undefined
+    });
+    
+    console.log(`Found ${orders.length} orders out of ${total} total`);
+    
+    // Format response with pagination info
+    res.json({
+      success: true,
+      data: orders,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    console.error("Error listing orders:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve orders list"
+    });
+  }
+};
+
+export { placeOrder, verifyOrder, userOrders, listOrders };

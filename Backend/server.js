@@ -10,6 +10,8 @@ import cartRouter from "./routes/cartRoute.js";
 import orderRouter from "./routes/orderRoute.js";
 import { createOrderTables } from "./models/orderModel.js";
 import connectCloudinary from "./config/cloudinary.js";
+import adminRouter from './routes/adminRoute.js';
+import { createAdminTable } from './models/adminModel.js';
 
 const app = express();
 const port = 4000;
@@ -34,6 +36,7 @@ app.use("/images", express.static('uploads'));
 app.use("/api/user", userRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
+app.use('/api/admin', adminRouter);
 
 // Async server startup
 const startServer = async () => {
@@ -42,7 +45,8 @@ const startServer = async () => {
     await Promise.all([
       userTables(),
       createItemTable(),
-      createOrderTables()
+      createOrderTables(),
+      createAdminTable()
     ]);
     
     app.listen(port, () => {

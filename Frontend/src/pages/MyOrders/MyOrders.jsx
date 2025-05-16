@@ -12,7 +12,10 @@ const MyOrders = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      if (!token) {
+      // Check for token in context OR directly from localStorage as backup
+      const authToken = token || localStorage.getItem("token");
+      
+      if (!authToken) {
         setLoading(false);
         setError("Please login to view your orders");
         return;
@@ -22,7 +25,7 @@ const MyOrders = () => {
         setLoading(true);
         const response = await axios.get(
           `${url}/api/order/user/orders`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${authToken}` } }
         );
 
         console.log("Orders response:", response.data);
@@ -36,6 +39,7 @@ const MyOrders = () => {
         console.error("Error fetching orders:", err);
         if (err.response?.status === 401) {
           // Token is invalid, force logout
+          localStorage.removeItem("token");
           logout();
         }
         setError(err.response?.data?.message || "Failed to load orders");
@@ -44,9 +48,16 @@ const MyOrders = () => {
       }
     };
 
-    fetchOrders();
+    // Only execute fetchOrders if the app has had a chance to initialize
+    // This prevents the initial unauthorized error before token loads
+    const timer = setTimeout(() => {
+      fetchOrders();
+    }, 300); // Small delay to allow context to initialize
+
+    return () => clearTimeout(timer);
   }, [url, token, logout]);
 
+  // Rest of your component remains the same...
   const toggleOrderDetails = (orderId) => {
     if (expandedOrderId === orderId) {
       setExpandedOrderId(null);
