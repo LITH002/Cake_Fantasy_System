@@ -1,32 +1,86 @@
-import React from 'react'
-import Sidebar from './Components/Sidebar/Sidebar'
-import Navbar from './Components/Navbar/Navbar'
-import { Route, Routes } from 'react-router-dom'
-import Add from './Pages/Add/Add'
-import Orders from './Pages/Orders/Orders'
-import List from './Pages/List/List'
+import React, { useContext } from 'react';
+import Sidebar from './Components/Sidebar/Sidebar';
+import Navbar from './Components/Navbar/Navbar';
+import { Route, Routes, Navigate } from 'react-router-dom';
+import Add from './Pages/Add/Add';
+import Orders from './Pages/Orders/Orders';
+import List from './Pages/List/List';
+import Login from './Pages/Login/Login';
+import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute';
+import { AdminAuthProvider, AdminAuthContext } from './context/AdminAuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const App = () => {
+// Layout component to wrap authenticated routes
+const AdminLayout = ({ children }) => {
+  return (
+    <>
+      <Navbar />
+      <hr />
+      <div className="app-content">
+        <Sidebar />
+        {children}
+      </div>
+    </>
+  );
+};
 
+const AppRoutes = () => {
+  const { isAuthenticated } = useContext(AdminAuthContext);
   const url = "http://localhost:4000";
 
   return (
-    <div>
-      <ToastContainer/>
-      <Navbar/>
-      <hr/>
-      <div className="app-content">
-        <Sidebar/>
-        <Routes>
-          <Route path="/add" element={<Add url={url}/>}/>
-          <Route path="/list" element={<List url={url}/>}/>
-          <Route path="/orders" element={<Orders url={url}/>}/>
-        </Routes>
-      </div>
-    </div>
-  )
-}
+    <Routes>
+      {/* Public route */}
+      <Route path="/login" element={
+        isAuthenticated ? <Navigate to="/list" replace /> : <Login url={url} />
+      } />
+      
+      {/* Default route */}
+      <Route path="/" element={
+        isAuthenticated ? <Navigate to="/list" replace /> : <Navigate to="/login" replace />
+      } />
+      
+      {/* Protected routes */}
+      <Route path="/list" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <List url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/add" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <Add url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/orders" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <Orders url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Add any owner-only routes here */}
+      
+      {/* Catch all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+};
 
-export default App
+const App = () => {
+  return (
+    <AdminAuthProvider>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <AppRoutes />
+    </AdminAuthProvider>
+  );
+};
+
+export default App;

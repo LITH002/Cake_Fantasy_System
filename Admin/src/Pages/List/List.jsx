@@ -1,3 +1,4 @@
+// filepath: [List.jsx](http://_vscodecontentref_/0)
 import React, { useEffect, useState } from 'react'
 import './List.css'
 import axios from 'axios'
@@ -5,32 +6,41 @@ import { toast } from 'react-toastify'
 
 const List = ({url}) => {
 
-  const [list,setList] = useState ([]);
+  const [list, setList] = useState([]);
 
   const fetchList = async () => {
-    const response = await axios.get(`${url}/api/item/list`);
-    if (response.data.success) {
-      setList(response.data.data);
-    }
-    else {
-      toast.error("Error");
+    try {
+      const response = await axios.get(`${url}/api/item/list`);
+      if (response.data.success) {
+        setList(response.data.data);
+      } else {
+        toast.error("Failed to fetch items");
+      }
+    } catch (error) {
+      console.error("Error fetching items:", error);
+      toast.error("Error loading items");
     }
   }
 
   const removeItem = async (itemId) => {
-    const response = await axios.post (`${url}/api/item/remove`, { id: itemId });
-    await fetchList();
-    if (response.data.success) {
-      toast.success(response.data.message);
-    }
-    else {
-      toast.error("Error removing item");
+    try {
+      const response = await axios.post(`${url}/api/item/remove`, { id: itemId });
+      if (response.data.success) {
+        toast.success(response.data.message);
+        // Refresh the list after successful removal
+        fetchList();
+      } else {
+        toast.error("Error removing item");
+      }
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item");
     }
   }
 
-  useEffect (() => {
+  useEffect(() => {
     fetchList();
-  }, [] )
+  }, []);
 
   return (
     <div className='list add flex-col'>
@@ -43,14 +53,15 @@ const List = ({url}) => {
             <b>Price</b>
             <b>Action</b>
           </div>
-          {list.map((item,index)=>{
+          {list.map((item, index) => {
             return (
               <div key={index} className='list-table-format'>
-                <img src={`${url}/images/`+item.image} alt=""/>
+                {/* Use the full Cloudinary URL stored in the database */}
+                <img src={item.image} alt={item.name}/>
                 <p>{item.name}</p>
                 <p>{item.category}</p>
                 <p>LKR {item.price}</p>
-                <p onClick={()=>removeItem(item.id)} className='cursor'>X</p>
+                <p onClick={() => removeItem(item.id)} className='cursor'>X</p>
               </div>
             )
           })}

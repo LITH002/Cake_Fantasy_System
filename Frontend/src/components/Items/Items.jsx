@@ -18,7 +18,7 @@ const Items = ({ id, itemID, name, price, description, image }) => {
   return (
     <div className='item'>
         <div className="item-image-container">
-            <img className='item-image' src={url + "/images/" + image} alt=""/>
+            <img className='item-image' src={image} alt={name}/>
             {!cartItems[actualItemID]
                 ?<img className='add' onClick={() => {
                   if (actualItemID !== undefined && actualItemID !== null) {
