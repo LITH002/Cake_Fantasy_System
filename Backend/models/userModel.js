@@ -10,16 +10,7 @@ export const createUserTable = async () => {
       password VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );
-  `;
-
-  try {
-    await db.query(userTableSql);
-    console.log("Users table created successfully");
-  } catch (err) {
-    console.error("Error creating users table:", err);
-    throw err;
-  }
+    );`;
 };
 
 // User Operations

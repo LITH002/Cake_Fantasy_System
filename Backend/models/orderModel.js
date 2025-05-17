@@ -31,16 +31,6 @@ const createOrderTables = async () => {
       UNIQUE KEY (order_id, item_id)
     ) ENGINE=InnoDB`
   ];
-
-  try {
-    for (const sql of tables) {
-      await db.query(sql);
-    }
-    console.log("Order tables created successfully");
-  } catch (err) {
-    console.error("Error creating order tables:", err);
-    throw err;
-  }
 };
 
 // Order operations
