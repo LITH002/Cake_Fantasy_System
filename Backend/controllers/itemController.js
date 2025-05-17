@@ -39,10 +39,10 @@ const addItem = async (req, res) => {
     }
 };
 
-// List Items
+// List Items (returns non-disabled items)
 const listItem = async (req, res) => {
     try {
-        const [results] = await db.query("SELECT * FROM items");
+        const [results] = await db.query("SELECT * FROM items WHERE disabled = FALSE OR disabled IS NULL");
         res.json({ success: true, data: results });
     } catch (error) {
         console.error("Error listing items:", error);
@@ -54,7 +54,7 @@ const listItem = async (req, res) => {
     }
 };
 
-// Remove Item
+// Remove Item (soft delete)
 const removeItem = async (req, res) => {
     try {
         const itemId = req.body.item_id;
@@ -66,9 +66,9 @@ const removeItem = async (req, res) => {
             });
         }
 
-        // Get the item to find its Cloudinary ID
+        // Check if item exists
         const [items] = await db.query(
-            "SELECT cloudinary_id FROM items WHERE id = ?", 
+            "SELECT id FROM items WHERE id = ?", 
             [itemId]
         );
 
@@ -79,21 +79,11 @@ const removeItem = async (req, res) => {
             });
         }
 
-        const cloudinary_id = items[0].cloudinary_id;
-
-        // Delete from Cloudinary if we have an ID
-        if (cloudinary_id) {
-            try {
-                await deleteFromCloudinary(cloudinary_id);
-                console.log(`Deleted image ${cloudinary_id} from Cloudinary`);
-            } catch (cloudinaryErr) {
-                console.error("Error deleting from Cloudinary:", cloudinaryErr);
-                // Continue with deletion even if Cloudinary fails
-            }
-        }
-
-        // Delete the item from database
-        await db.query("DELETE FROM items WHERE id = ?", [itemId]);
+        // Marking the item as disabled 
+        await db.query(
+            "UPDATE items SET disabled = TRUE WHERE id = ?", 
+            [itemId]
+        );
 
         res.json({ 
             success: true, 

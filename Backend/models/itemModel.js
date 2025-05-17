@@ -9,7 +9,8 @@ const createItemTable = async () => {
       price DECIMAL(10,2) NOT NULL,
       description TEXT,
       image VARCHAR(255) COMMENT 'Cloudinary URL',
-      cloudinary_id VARCHAR(255) COMMENT 'Cloudinary public ID for image management'
+      cloudinary_id VARCHAR(255) COMMENT 'Cloudinary public ID for image management',
+      disabled BOOLEAN DEFAULT FALSE
     );
   `;
 
