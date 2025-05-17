@@ -10,6 +10,7 @@ import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute';
 import { AdminAuthProvider, AdminAuthContext } from './context/AdminAuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import EditItem from './Pages/EditItem/EditItem';
 
 // Layout component to wrap authenticated routes
 const AdminLayout = ({ children }) => {
@@ -66,7 +67,11 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      {/* Add any owner-only routes here */}
+      <Route path="/edit-item/:itemId" element={
+        <AdminLayout>
+          <EditItem url={url} />
+        </AdminLayout>
+      } />
       
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />

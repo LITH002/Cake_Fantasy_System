@@ -100,4 +100,113 @@ const removeItem = async (req, res) => {
     }
 };
 
-export { addItem, listItem, removeItem };
+// Get item to update
+const getItem = async (req, res) => {
+    try {
+        const itemId = req.params.id;
+        
+        const [items] = await db.query(
+            "SELECT * FROM items WHERE id = ?", 
+            [itemId]
+        );
+        
+        if (!items.length) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Item not found" 
+            });
+        }
+        
+        res.json({ 
+            success: true, 
+            data: items[0] 
+        });
+    } catch (error) {
+        console.error("Error fetching item:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Error fetching item",
+            error: error.message 
+        });
+    }
+};
+
+// Update Item
+// Update Item
+const updateItem = async (req, res) => {
+    try {
+        const { item_id } = req.body;
+        let { name, description, price } = req.body;
+        let cloudinaryResult = null;
+
+        if (!item_id) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Item ID is required" 
+            });
+        }
+
+        // Check if item exists and get current values
+        const [items] = await db.query(
+            "SELECT * FROM items WHERE id = ?", 
+            [item_id]
+        );
+
+        if (!items.length) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Item not found" 
+            });
+        }
+
+        // Use existing values if not provided in the request
+        const currentItem = items[0];
+        name = name || currentItem.name;
+        description = description || currentItem.description;
+        price = price || currentItem.price;
+        const category = currentItem.category; // Always use existing category
+
+        // If a new image is uploaded, update it in Cloudinary
+        if (req.file) {
+            // Delete old image from Cloudinary if it exists
+            if (currentItem.cloudinary_id) {
+                try {
+                    await deleteFromCloudinary(currentItem.cloudinary_id);
+                } catch (cloudinaryErr) {
+                    console.error("Error deleting old image from Cloudinary:", cloudinaryErr);
+                    // Continue anyway
+                }
+            }
+            
+            // Upload new image to Cloudinary
+            cloudinaryResult = await uploadToCloudinary(req.file.buffer);
+        }
+
+        // Update the item in the database
+        const updateQuery = cloudinaryResult
+            ? "UPDATE items SET name = ?, description = ?, price = ?, image = ?, cloudinary_id = ? WHERE id = ?"
+            : "UPDATE items SET name = ?, description = ?, price = ? WHERE id = ?";
+        
+        const updateParams = cloudinaryResult
+            ? [name, description, price, cloudinaryResult.secure_url, cloudinaryResult.public_id, item_id]
+            : [name, description, price, item_id];
+
+        await db.query(updateQuery, updateParams);
+
+        res.json({ 
+            success: true, 
+            message: "Item updated successfully",
+            imageUrl: cloudinaryResult ? cloudinaryResult.secure_url : currentItem.image
+        });
+
+    } catch (error) {
+        console.error("Error updating item:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Error updating item",
+            error: error.message 
+        });
+    }
+};
+
+export { addItem, listItem, removeItem, updateItem, getItem };

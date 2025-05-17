@@ -1,12 +1,12 @@
-// filepath: [List.jsx](http://_vscodecontentref_/0)
-import React, { useEffect, useState } from 'react'
-import './List.css'
-import axios from 'axios'
-import { toast } from 'react-toastify'
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import './List.css';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const List = ({url}) => {
-
   const [list, setList] = useState([]);
+  const navigate = useNavigate();
 
   const fetchList = async () => {
     try {
@@ -24,7 +24,7 @@ const List = ({url}) => {
 
   const removeItem = async (itemId) => {
     try {
-      const response = await axios.post(`${url}/api/item/remove`, { id: itemId });
+      const response = await axios.post(`${url}/api/item/remove`, { item_id: itemId });
       if (response.data.success) {
         toast.success(response.data.message);
         // Refresh the list after successful removal
@@ -34,8 +34,12 @@ const List = ({url}) => {
       }
     } catch (error) {
       console.error("Error removing item:", error);
-      toast.error("Failed to remove item");
+      toast.error(error.response?.data?.message || "Failed to remove item");
     }
+  }
+
+  const handleEdit = (itemId) => {
+    navigate(`/edit-item/${itemId}`);
   }
 
   useEffect(() => {
@@ -51,7 +55,7 @@ const List = ({url}) => {
             <b>Name</b>
             <b>Category</b>
             <b>Price</b>
-            <b>Action</b>
+            <b>Actions</b>
           </div>
           {list.map((item, index) => {
             return (
@@ -61,7 +65,20 @@ const List = ({url}) => {
                 <p>{item.name}</p>
                 <p>{item.category}</p>
                 <p>LKR {item.price}</p>
-                <p onClick={() => removeItem(item.id)} className='cursor'>X</p>
+                <div className="action-buttons">
+                  <button 
+                    className="edit-btn" 
+                    onClick={() => handleEdit(item.id)}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    className="delete-btn" 
+                    onClick={() => removeItem(item.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             )
           })}

@@ -1,5 +1,5 @@
 import express from "express";
-import { addItem, listItem, removeItem } from "../controllers/itemController.js"; 
+import { addItem, getItem, listItem, removeItem, updateItem } from "../controllers/itemController.js"; 
 import multer from "multer";
 import connectCloudinary from "../config/cloudinary.js";
 
@@ -48,16 +48,23 @@ const handleUploadErrors = (err, req, res, next) => {
   next();
 };
 
-// Define API routes
+// API routes
+
+itemRouter.get("/list", listItem);
+itemRouter.get("/:id", getItem);
+
 itemRouter.post("/add", 
   upload.single("image"), 
   handleUploadErrors, 
   addItem
 );
 
-itemRouter.get("/list", listItem);
+itemRouter.post("/update", 
+  upload.single("image"), 
+  handleUploadErrors, 
+  updateItem
+);
 
-// Changed to DELETE method (more semantically correct)
 itemRouter.post("/remove", removeItem); 
 
 export default itemRouter;
