@@ -10,6 +10,13 @@ import ProtectedRoute from './Components/ProtectedRoute/ProtectedRoute';
 import { AdminAuthProvider, AdminAuthContext } from './context/AdminAuthContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import EditItem from './Pages/EditItem/EditItem';
+import GRNList from './Pages/GRN/GRNList';
+import CreateGRN from './Pages/GRN/CreateGRN';
+import GRNDetails from './Pages/GRN/GRNDetails';
+import SupplierList from './Pages/Supplier/SupplierList';
+import AddSupplier from './Pages/Supplier/AddSupplier';
+import EditSupplier from './Pages/Supplier/EditSupplier';
 
 // Layout component to wrap authenticated routes
 const AdminLayout = ({ children }) => {
@@ -66,7 +73,59 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       
-      {/* Add any owner-only routes here */}
+      <Route path="/edit-item/:itemId" element={
+        <AdminLayout>
+          <EditItem url={url} />
+        </AdminLayout>
+      } />
+
+      <Route path="/suppliers" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <SupplierList url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/add-supplier" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <AddSupplier url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/edit-supplier/:supplierId" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <EditSupplier url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/grn" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <GRNList url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/create-grn" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <CreateGRN url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/grn/:grnId" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <GRNDetails url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
       
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />

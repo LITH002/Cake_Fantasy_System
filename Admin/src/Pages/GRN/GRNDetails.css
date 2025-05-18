@@ -1,0 +1,364 @@
+/* Main container - remove max-width to expand fully */
+.grn-details-container {
+  width: 100%;
+  margin: 0;
+  padding: 20px 30px;
+  height: calc(100vh - 60px); /* Assume header takes about 60px */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent scrolling at container level */
+}
+
+/* Header styling - make more compact */
+.grn-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+.grn-details-header h1 {
+  margin: 0 0 4px 0;
+  color: #591b0d;
+  font-size: 22px;
+}
+
+.back-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.back-button:hover {
+  background-color: #5a6268;
+}
+
+/* Content section - make it fill available space and handle scrolling internally */
+.grn-details-content {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  flex: 1; /* Fill remaining space */
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Two equal columns */
+  grid-template-rows: auto 1fr auto; /* Header, content, footer */
+  grid-gap: 20px;
+  overflow-y: auto; /* Allow scrolling within this container */
+  grid-template-areas:
+    "info supplier"
+    "items items"
+    "notes actions";
+}
+
+/* Adjust section positioning in the grid */
+.grn-info-section {
+  grid-area: info;
+  margin-bottom: 0;
+}
+
+.grn-supplier-section {
+  grid-area: supplier;
+  margin-bottom: 0;
+}
+
+.grn-items-section {
+  grid-area: items;
+  margin-bottom: 0;
+}
+
+.table-container {
+  overflow-x: auto; /* Allow horizontal scroll for table if needed */
+}
+
+.grn-notes-section {
+  grid-area: notes;
+  margin-bottom: 0;
+}
+
+.grn-actions {
+  grid-area: actions;
+  margin-top: 0;
+  justify-self: end;
+  align-self: end;
+  display: flex;
+  gap: 15px;
+}
+
+/* Section styling - more compact */
+.grn-info-section h3,
+.grn-supplier-section h3,
+.grn-items-section h3,
+.grn-notes-section h3 {
+  margin: 0 0 10px 0;
+  color: #591b0d;
+  font-size: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+/* More compact grid layout */
+.grn-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+.info-value {
+  font-size: 15px;
+}
+
+/* Make table more compact */
+.grn-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 5px;
+}
+
+.grn-items-table th,
+.grn-items-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.grn-items-table th {
+  background-color: #f8f9fa;
+  font-weight: 500;
+  color: #591b0d;
+}
+
+/* Column width distribution */
+.item-name-col {
+  width: 45%;
+}
+
+.quantity-col {
+  width: 15%;
+  text-align: center;
+}
+
+.price-col, .total-col {
+  width: 20%;
+  text-align: left;
+}
+
+/* Table alignment adjustments */
+.grn-items-table th.quantity-col {
+  text-align: left;
+}
+
+.grn-items-table th.price-col,
+.grn-items-table th.total-col {
+  text-align: left;
+}
+
+/* Footer total row */
+.total-label {
+  text-align: left;
+  font-weight: 500;
+  padding-right: 20px;
+  color: #444;
+}
+
+.total-value {
+  text-align: left;
+  font-weight: bold;
+  color: #591b0d;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Loading state */
+.grn-details-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 60px);
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #591b0d;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+.grn-details-loading p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.grn-details-loading small {
+  color: #6c757d;
+  margin-top: 5px;
+}
+
+/* Error state */
+.grn-details-error {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - 200px);
+}
+
+.error-icon {
+  font-size: 42px;
+  margin-bottom: 16px;
+}
+
+.grn-details-error p {
+  margin-bottom: 20px;
+  color: #dc3545;
+  font-size: 16px;
+}
+
+/* Notes section styling */
+.notes-content {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 4px;
+  margin: 0;
+  line-height: 1.5;
+  color: #444;
+}
+
+.no-notes {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.no-data-message {
+  color: #6c757d;
+  font-style: italic;
+  padding: 10px 0;
+}
+
+/* Adjust layouts for different screen sizes */
+@media (min-width: 1400px) {
+  .grn-details-content {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .grn-details-content {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "info supplier"
+      "items items"
+      "notes actions";
+  }
+}
+
+@media (max-width: 992px) {
+  .grn-details-container {
+    height: auto; /* Allow scrolling on smaller screens */
+    overflow: visible;
+    padding: 15px;
+  }
+  
+  .grn-details-content {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    padding: 15px;
+  }
+  
+  .grn-info-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  
+  .grn-actions {
+    align-self: flex-end;
+    margin-top: 20px;
+  }
+}
+
+@media (max-width: 576px) {
+  .grn-details-container {
+    padding: 10px;
+  }
+  
+  .grn-details-content {
+    padding: 15px;
+  }
+  
+  .grn-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .back-button {
+    align-self: flex-start;
+  }
+  
+  .grn-info-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .grn-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .approve-btn,
+  .reject-btn {
+    width: 100%;
+  }
+}
+
+/* Print-friendly layout */
+@media print {
+  .grn-details-container {
+    height: auto;
+    overflow: visible;
+    padding: 0;
+  }
+  
+  .grn-details-content {
+    display: block;
+    box-shadow: none;
+    padding: 0;
+  }
+  
+  .back-button, 
+  .grn-actions {
+    display: none;
+  }
+}

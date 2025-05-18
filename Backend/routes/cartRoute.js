@@ -52,7 +52,7 @@ router.get("/", authMiddleware, async (req, res) => {
             success: true, 
             data: {
                 items: cartItems,
-                total: total.toFixed(2)
+                total: (Number(total) || 0).toFixed(2)
             }
         });
     } catch (error) {

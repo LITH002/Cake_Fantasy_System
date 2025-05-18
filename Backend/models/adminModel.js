@@ -14,31 +14,7 @@ const createAdminTable = async () => {
       role ENUM('employee', 'owner') NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    )
-  `;
-
-  try {
-    await db.query(sql);
-    console.log("Admin users table created successfully");
-    
-    // Check if there's at least one owner account
-    const [owners] = await db.query("SELECT COUNT(*) as count FROM admin_users WHERE role = 'owner'");
-    
-    // If no owner exists, create a default one
-    if (owners[0].count === 0) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash("adminpassword", salt);
-      
-      await db.query(
-        "INSERT INTO admin_users (username, email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, ?)",
-        ["admin", "admin@cakefantasy.com", hashedPassword, "Admin", "User", "owner"]
-      );
-      console.log("Default admin owner account created");
-    }
-  } catch (err) {
-    console.error("Error creating admin_users table:", err);
-    throw err;
-  }
+    )`;
 };
 
 // Admin User model

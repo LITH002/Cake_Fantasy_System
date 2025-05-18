@@ -11,16 +11,7 @@ const createItemTable = async () => {
       image VARCHAR(255) COMMENT 'Cloudinary URL',
       cloudinary_id VARCHAR(255) COMMENT 'Cloudinary public ID for image management',
       disabled BOOLEAN DEFAULT FALSE
-    );
-  `;
-
-  try {
-    await db.query(sql);
-    console.log("Items table created successfully");
-  } catch (err) {
-    console.error("Error creating items table:", err);
-    throw err; // Re-throw to handle in server.js
-  }
+    );`;
 };
 
 export default createItemTable;
