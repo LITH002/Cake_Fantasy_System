@@ -12,6 +12,8 @@ import { createOrderTables } from "./models/orderModel.js";
 import connectCloudinary from "./config/cloudinary.js";
 import adminRouter from './routes/adminRoute.js';
 import { createAdminTable } from './models/adminModel.js';
+import supplierRouter from './routes/supplierRoute.js';
+import grnRouter from './routes/grnRoute.js';
 
 const app = express();
 const port = 4000;
@@ -37,6 +39,8 @@ app.use("/api/user", userRouter);
 app.use("/api/cart", cartRouter);
 app.use("/api/order", orderRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/supplier', supplierRouter);
+app.use('/api/grn', grnRouter);
 
 // Async server startup
 const startServer = async () => {
