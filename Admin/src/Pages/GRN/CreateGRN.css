@@ -290,6 +290,10 @@
   border: 1px dashed #ddd;
 }
 
+.selling-price-container {
+  width: 100%;
+}
+
 @media (max-width: 768px) {
   .form-row {
     flex-direction: column;
@@ -315,6 +319,29 @@
   
   .remove-item-btn {
     padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .create-grn-container {
+    padding: 10px;
+  }
+  
+  .create-grn-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .back-button {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .items-table th,
+  .items-table td {
+    padding: 8px 10px;
     font-size: 12px;
   }
 }

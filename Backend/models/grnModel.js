@@ -11,7 +11,6 @@ export const createGRNTables = async () => {
       received_by INT NOT NULL,
       notes TEXT,
       total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-      status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
@@ -26,6 +25,7 @@ export const createGRNTables = async () => {
       expected_quantity INT NOT NULL,
       received_quantity INT NOT NULL,
       unit_price DECIMAL(10,2) NOT NULL,
+      selling_price DECIMAL(10,2) NULL,
       expiry_date DATE NULL,
       batch_number VARCHAR(100) NULL,
       notes TEXT,
@@ -62,15 +62,16 @@ export const GRN = {
       const grnNumber = await GRN.generateGRNNumber();
       
       // Calculate total amount
-      const totalAmount = items.reduce((sum, item) => 
-        sum + (item.received_quantity * item.unit_price), 0);
+      const totalAmount = items.reduce((sum, item) => {
+        return sum + (parseFloat(item.unit_price) * parseInt(item.received_quantity));
+      }, 0);
       
       // Insert GRN header
       const [headerResult] = await connection.query(
         `INSERT INTO grn_headers (
           grn_number, supplier_id, po_reference, received_date,
-          received_by, notes, total_amount, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          received_by, notes, total_amount
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           grnNumber,
           grnData.supplier_id,
@@ -78,8 +79,7 @@ export const GRN = {
           grnData.received_date,
           grnData.received_by,
           grnData.notes || null,
-          totalAmount,
-          'pending'
+          totalAmount
         ]
       );
       
@@ -90,25 +90,63 @@ export const GRN = {
         await connection.query(
           `INSERT INTO grn_details (
             grn_id, item_id, expected_quantity, received_quantity,
-            unit_price, expiry_date, batch_number, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            unit_price, selling_price, expiry_date, batch_number, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             grnId,
             item.item_id,
             item.expected_quantity || item.received_quantity,
             item.received_quantity,
             item.unit_price,
+            item.selling_price || null,
             item.expiry_date || null,
             item.batch_number || null,
             item.notes || null
           ]
         );
+        
+        // Update inventory directly
+        try {
+          // Check if the column exists first by getting the table info
+          const [columns] = await connection.query(
+            `SHOW COLUMNS FROM items LIKE 'selling_price'`
+          );
+          
+          if (item.selling_price && columns.length > 0) {
+            // If selling_price column exists and we have a value, update it
+            await connection.query(
+              `UPDATE items SET 
+                stock_quantity = COALESCE(stock_quantity, 0) + ?,
+                cost_price = ?,
+                selling_price = ?
+              WHERE id = ?`,
+              [item.received_quantity, item.unit_price, item.selling_price, item.item_id]
+            );
+          } else {
+            // Otherwise just update stock and cost price
+            await connection.query(
+              `UPDATE items SET 
+                stock_quantity = COALESCE(stock_quantity, 0) + ?,
+                cost_price = ?
+              WHERE id = ?`,
+              [item.received_quantity, item.unit_price, item.item_id]
+            );
+          }
+        } catch (error) {
+          console.error("Error updating inventory:", error);
+          // Continue processing other items even if one fails
+        }
       }
       
       await connection.commit();
-      return { id: grnId, grn_number: grnNumber };
+      
+      return {
+        id: grnId,
+        grn_number: grnNumber
+      };
     } catch (error) {
       await connection.rollback();
+      console.error("Error creating GRN:", error);
       throw error;
     } finally {
       connection.release();
@@ -219,14 +257,9 @@ export const GRN = {
   },
   
   // List all GRNs with pagination and filters
-  findAll: async ({ status, supplier_id, startDate, endDate, page = 1, limit = 20 }) => {
+  findAll: async ({ supplier_id, startDate, endDate, page = 1, limit = 20 }) => {
     let whereConditions = [];
     const params = [];
-    
-    if (status) {
-      whereConditions.push("gh.status = ?");
-      params.push(status);
-    }
     
     if (supplier_id) {
       whereConditions.push("gh.supplier_id = ?");
@@ -292,110 +325,63 @@ export const GRN = {
     return result.affectedRows > 0;
   },
 
- updateStatus: async (id, status, userId) => {
-  const connection = await db.getConnection();
-  
-  try {
-    await connection.beginTransaction();
+  // updateStatus: async (id, status, userId) => {
+  //   const connection = await db.getConnection();
     
-    console.log(`Updating GRN #${id} status to ${status} by user ${userId}`);
-    
-    // Check if the record exists first
-    const [checkResult] = await connection.query(
-      'SELECT id, status FROM grn_headers WHERE id = ?',
-      [id]
-    );
-    
-    if (checkResult.length === 0) {
-      console.log(`GRN #${id} not found`);
-      await connection.rollback();
-      return false;
-    }
-    
-    console.log(`Current GRN status: ${checkResult[0].status}`);
-    
-    // Update GRN status in grn_headers table - explicitly handle status column
-    const [updateResult] = await connection.query(
-      `UPDATE grn_headers SET 
-        status = ?, 
-        updated_at = NOW(),
-        updated_by = ?
-      WHERE id = ?`,
-      [status, userId, id]
-    );
-    
-    console.log(`Database update result:`, updateResult);
-    
-    if (updateResult.affectedRows === 0) {
-      console.log(`GRN #${id} status update failed - no rows affected`);
-      await connection.rollback();
-      return false;
-    }
-    
-    // If approved, update inventory
-    if (status === 'approved') {
-      // Get the GRN items
-      const [items] = await connection.query(
-        `SELECT item_id, received_quantity FROM grn_details WHERE grn_id = ?`,
-        [id]
-      );
+  //   try {
+  //     await connection.beginTransaction();
       
-      console.log(`Found ${items.length} items to update in inventory`);
+  //     console.log(`Attempting to update GRN #${id} status to "${status}" by user ${userId}`);
       
-      // Update inventory for each item
-      for (const item of items) {
-        await connection.query(
-          `UPDATE items SET 
-            stock_quantity = COALESCE(stock_quantity, 0) + ? 
-          WHERE id = ?`,
-          [item.received_quantity, item.item_id]
-        );
-        
-        console.log(`Added ${item.received_quantity} units to item #${item.item_id}`);
-        
-        // Add inventory transaction record if you have that table
-        try {
-          await connection.query(
-            `INSERT INTO inventory_transactions 
-              (item_id, quantity, transaction_type, reference_id, reference_type, notes, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [
-              item.item_id,
-              item.received_quantity,
-              'in',
-              id,
-              'grn',
-              `GRN #${id} approval`,
-              userId
-            ]
-          );
-        } catch (transactionError) {
-          console.warn("Could not record inventory transaction:", transactionError.message);
-        }
-      }
-    }
-    
-    // Verify the update was successful
-    const [verifyResult] = await connection.query(
-      'SELECT status FROM grn_headers WHERE id = ?',
-      [id]
-    );
-    
-    if (verifyResult.length > 0) {
-      console.log(`GRN #${id} new status: ${verifyResult[0].status}`);
-    }
-    
-    await connection.commit();
-    console.log(`GRN #${id} status updated successfully to ${status}`);
-    return true;
-  } catch (error) {
-    await connection.rollback();
-    console.error(`Error updating GRN status:`, error);
-    throw error;
-  } finally {
-    connection.release();
-  }
-}
+  //     // Check if the record exists first
+  //     const [checkResult] = await connection.query(
+  //       'SELECT id, status FROM grn_headers WHERE id = ?',
+  //       [id]
+  //     );
+      
+  //     if (checkResult.length === 0) {
+  //       console.log(`GRN #${id} not found`);
+  //       await connection.rollback();
+  //       return false;
+  //     }
+      
+  //     console.log(`Current GRN status: ${checkResult[0].status}`);
+
+  //     const validStatuses = ['pending', 'approved', 'rejected'];
+  //     if (!validStatuses.includes(status)) {
+  //       console.error(`Invalid status value: "${status}". Must be one of: ${validStatuses.join(', ')}`);
+  //       await connection.rollback();
+  //       return false;
+  //     }
+      
+  //     // Fix the SQL syntax error (extra comma)
+  //     const [updateResult] = await connection.query(
+  //       `UPDATE grn_headers SET 
+  //         status = ?, 
+  //         updated_at = NOW()
+  //       WHERE id = ?`,
+  //       [status, id]
+  //     );
+      
+  //     console.log(`Database update result:`, updateResult);
+      
+  //     if (updateResult.affectedRows === 0) {
+  //       console.log(`GRN #${id} status update failed - no rows affected`);
+  //       await connection.rollback();
+  //       return false;
+  //     }
+      
+  //     await connection.commit();
+  //     console.log(`GRN #${id} status updated successfully to ${status}`);
+  //     return true;
+  //   } catch (error) {
+  //     await connection.rollback();
+  //     console.error(`Error updating GRN status:`, error);
+  //     throw error;
+  //   } finally {
+  //     connection.release();
+  //   }
+  // }
 };
 
 

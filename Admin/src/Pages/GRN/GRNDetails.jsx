@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AdminAuthContext } from '../../context/AdminAuthContext';
-import GRNStatusBadge from '../../Components/GRNComponents/GRNStatusBadge';
 import './GRNDetails.css';
 
 const GRNDetails = ({ url }) => {
@@ -11,8 +10,8 @@ const GRNDetails = ({ url }) => {
   const [grn, setGRN] = useState(null);
   const [loading, setLoading] = useState(true);
   const [supplier, setSupplier] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const { token, hasRole } = useContext(AdminAuthContext);
+  //const [actionLoading, setActionLoading] = useState(false);
+  const { token } = useContext(AdminAuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -69,52 +68,6 @@ const GRNDetails = ({ url }) => {
     }
   };
 
-  const updateGRNStatus = async (status) => {
-  try {
-    setActionLoading(true);
-    
-    console.log(`Updating GRN ${grnId} status to ${status}`);
-    
-    const response = await axios.post(
-      `${url}/api/grn/${grnId}/update-status`,
-      { status },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    
-    console.log("Update status response:", response.data);
-    
-    if (response.data.success) {
-      // Immediately update the local state to reflect the new status
-      setGRN(prevState => ({
-        ...prevState,
-        status: status
-      }));
-      
-      toast.success(`GRN ${status === 'approved' ? 'approved' : 'rejected'} successfully`);
-      
-      // Then refetch the full details for completeness
-      fetchGRNDetails();
-    } else {
-      toast.error(response.data.message || "Failed to update GRN status");
-    }
-  } catch (err) {
-    console.error("Error updating GRN status:", err);
-    
-    if (err.response) {
-      console.error("Response error:", err.response.data);
-      toast.error(err.response.data?.message || "Error updating GRN status");
-    } else if (err.request) {
-      console.error("No response received");
-      toast.error("No response from server. Check your connection.");
-    } else {
-      console.error("Request error:", err.message);
-      toast.error(`Error: ${err.message}`);
-    }
-  } finally {
-    setActionLoading(false);
-  }
-};
-
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -163,14 +116,8 @@ const GRNDetails = ({ url }) => {
       <div className="grn-details-header">
         <div>
           <h1>GRN Details: {grn.reference_number}</h1>
-          <GRNStatusBadge status={grn.status} />
         </div>
-        <button 
-          className="back-button"
-          onClick={() => navigate('/grn')}
-        >
-          Back to GRN List
-        </button>
+        <button className="back-button" onClick={() => navigate('/grn')}>Back to GRN List</button>
       </div>
 
       <div className="grn-details-content">
@@ -182,10 +129,6 @@ const GRNDetails = ({ url }) => {
               <span className="info-value">{grn.reference_number}</span>
             </div>
             <div className="info-item">
-              <span className="info-label">Status:</span>
-              <span className="info-value"><GRNStatusBadge status={grn.status} /></span>
-            </div>
-            <div className="info-item">
               <span className="info-label">Created Date:</span>
               <span className="info-value">{formatDate(grn.created_at)}</span>
             </div>
@@ -193,18 +136,6 @@ const GRNDetails = ({ url }) => {
               <span className="info-label">Created By:</span>
               <span className="info-value">{grn.created_by_name || 'Unknown'}</span>
             </div>
-            {grn.status !== 'pending' && (
-              <>
-                <div className="info-item">
-                  <span className="info-label">Updated Date:</span>
-                  <span className="info-value">{formatDate(grn.updated_at)}</span>
-                </div>
-                <div className="info-item">
-                  <span className="info-label">Updated By:</span>
-                  <span className="info-value">{grn.updated_by_name || 'Unknown'}</span>
-                </div>
-              </>
-            )}
           </div>
         </div>
 
@@ -246,10 +177,12 @@ const GRNDetails = ({ url }) => {
                 <tr>
                   <th className="item-name-col">Item Name</th>
                   <th className="quantity-col">Quantity</th>
-                  <th className="price-col">Unit Price</th>
+                  <th className="price-col">Purchase Price</th>
+                  <th className="price-col">Selling Price</th>
                   <th className="total-col">Total</th>
                 </tr>
               </thead>
+
               <tbody>
                 {(grn.items || []).length > 0 ? (
                   grn.items.map((item, index) => (
@@ -257,18 +190,23 @@ const GRNDetails = ({ url }) => {
                       <td className="item-name-col">{item.name || 'Unknown'}</td>
                       <td className="quantity-col">{item.quantity || item.received_quantity || 0}</td>
                       <td className="price-col">LKR {parseFloat(item.unit_price || 0).toFixed(2)}</td>
+                      <td className="price-col">
+                        {item.selling_price 
+                          ? `LKR ${parseFloat(item.selling_price).toFixed(2)}`
+                          : 'Not updated'}
+                      </td>
                       <td className="total-col">LKR {calculateItemTotal(item)}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="no-items">No items found in this GRN</td>
+                    <td colSpan="5" className="no-items">No items found in this GRN</td>
                   </tr>
                 )}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan="3" className="total-label">Total Amount:</td>
+                  <td colSpan="4" className="total-label">Total Amount:</td>
                   <td className="total-value">LKR {parseFloat(grn.total_amount || 0).toFixed(2)}</td>
                 </tr>
               </tfoot>
@@ -284,39 +222,6 @@ const GRNDetails = ({ url }) => {
             <p className="no-notes">No additional notes for this GRN</p>
           )}
         </div>
-
-        {grn.status === 'pending' && hasRole('owner') && (
-          <div className="grn-actions">
-            <button 
-              className="approve-btn"
-              onClick={() => updateGRNStatus('approved')}
-              disabled={actionLoading}
-            >
-              {actionLoading ? (
-                <>
-                  <span className="button-spinner"></span>
-                  Processing...
-                </>
-              ) : (
-                'Approve GRN'
-              )}
-            </button>
-            <button 
-              className="reject-btn"
-              onClick={() => updateGRNStatus('rejected')}
-              disabled={actionLoading}
-            >
-              {actionLoading ? (
-                <>
-                  <span className="button-spinner"></span>
-                  Processing...
-                </>
-              ) : (
-                'Reject GRN'
-              )}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

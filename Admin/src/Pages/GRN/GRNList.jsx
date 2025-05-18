@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AdminAuthContext } from '../../context/AdminAuthContext';
-import GRNStatusBadge from '../../Components/GRNComponents/GRNStatusBadge';
 import './GRNList.css';
 
 const GRNList = ({ url }) => {
@@ -40,9 +39,8 @@ const fetchGRNs = async () => {
     
     // Build query string properly
     let queryString = '';
-    if (filters.status || filters.supplierId || filters.startDate || filters.endDate || pagination.page) {
+    if ( filters.supplierId || filters.startDate || filters.endDate || pagination.page) {
       const params = new URLSearchParams();
-      if (filters.status) params.append('status', filters.status);
       if (filters.supplierId) params.append('supplier_id', filters.supplierId);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
@@ -163,36 +161,13 @@ const fetchGRNs = async () => {
     <div className="grn-container">
       <div className="grn-header">
         <h1>Goods Received Notes</h1>
-        <button 
-          className="create-grn-btn" 
-          onClick={() => navigate('/create-grn')}
-        >
-          Create New GRN
-        </button>
+        <button className="create-grn-btn" onClick={() => navigate('/create-grn')}>Create New GRN</button>
       </div>
 
       <div className="grn-filters">
         <div className="filter-group">
-          <p>Status</p>
-          <select 
-            name="status" 
-            value={filters.status}
-            onChange={handleFilterChange}
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
-        
-        <div className="filter-group">
           <p>Supplier</p>
-          <select 
-            name="supplierId" 
-            value={filters.supplierId}
-            onChange={handleFilterChange}
-          >
+          <select name="supplierId" value={filters.supplierId} onChange={handleFilterChange}>
             <option value="">All Suppliers</option>
             {suppliers.map(supplier => (
               <option key={supplier.id} value={supplier.id}>
@@ -230,8 +205,7 @@ const fetchGRNs = async () => {
                 <th>Supplier</th>
                 <th>Date</th>
                 <th>Items</th>
-                <th>Total Amount</th>
-                <th>Status</th>
+                <th>Total</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -242,21 +216,10 @@ const fetchGRNs = async () => {
                   <td>{getSupplierName(grn.supplier_id)}</td>
                   <td>{formatDate(grn.created_at)}</td>
                   <td>{grn.item_count}</td>
-                  <td className="grn-amount">
-                    LKR {typeof grn.total_amount === 'number' 
-                      ? grn.total_amount.toFixed(2) 
-                      : parseFloat(grn.total_amount || 0).toFixed(2)}
+                  <td className="grn-amount">LKR {typeof grn.total_amount === 'number' ? grn.total_amount.toFixed(2) : parseFloat(grn.total_amount || 0).toFixed(2)}
                   </td>
                   <td>
-                    <GRNStatusBadge status={grn.status} />
-                  </td>
-                  <td>
-                    <button 
-                      className="view-btn"
-                      onClick={() => handleViewGRN(grn.id)}
-                    >
-                      View Details
-                    </button>
+                    <button className="view-btn" onClick={() => handleViewGRN(grn.id)}>View Details</button>
                   </td>
                 </tr>
               ))}

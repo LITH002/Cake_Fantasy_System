@@ -4,8 +4,7 @@ import {
   completeGRN, 
   getGRNById, 
   listGRNs, 
-  cancelGRN, 
-  updateGRNStatus
+  cancelGRN
 } from '../controllers/grnController.js';
 import authMiddleware from '../middleware/auth.js';
 import adminMiddleware from '../middleware/admin.js';
@@ -37,9 +36,6 @@ router.post('/:id/complete', completeGRN);
 router.post('/:id/cancel', cancelGRN);
 
 // Get GRN by ID 
-router.get('/:id', getGRNById);
-
-// Update your routes file to include the status update endpoint
-router.post('/:id/update-status', updateGRNStatus);  
+router.get('/:id', getGRNById); 
 
 export default router;

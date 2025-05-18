@@ -29,7 +29,7 @@ export const createGRN = async (req, res) => {
       received_date,
       received_by: req.user.id, // From auth middleware
       notes
-    }, items);
+    }, items); // Items now can include selling_price
     
     res.status(201).json({
       success: true,
@@ -83,7 +83,6 @@ export const completeGRN = async (req, res) => {
 };
 
 // Get GRN by ID
-// Update the getGRNById controller method to match your model:
 export const getGRNById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -99,13 +98,11 @@ export const getGRNById = async (req, res) => {
     // Transform GRN data for frontend
     const formattedGRN = {
       id: grn.id,
-      reference_number: grn.grn_number,
+      reference_number: grn.reference_number || grn.grn_number,
       supplier_id: grn.supplier_id,
-      supplier_name: grn.supplier_name,
       created_at: grn.created_at,
       updated_at: grn.updated_at,
       received_date: grn.received_date,
-      status: grn.status,
       notes: grn.notes,
       received_by: grn.received_by,
       received_by_name: grn.received_by_name,
@@ -115,10 +112,10 @@ export const getGRNById = async (req, res) => {
       items: grn.items.map(item => ({
         id: item.id,
         item_id: item.item_id,
-        name: item.item_name,
-        //category: '', // Add category if available in your model
+        name: item.item_name || item.name,
         quantity: item.received_quantity,
         unit_price: parseFloat(item.unit_price),
+        selling_price: item.selling_price ? parseFloat(item.selling_price) : null,
         sku: item.sku,
         image: item.image,
         unit: item.unit

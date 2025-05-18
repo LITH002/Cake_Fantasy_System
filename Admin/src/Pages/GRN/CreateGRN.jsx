@@ -18,7 +18,8 @@ const CreateGRN = ({ url }) => {
       name: '', 
       category: 'Cake Ingredients', 
       quantity: 1, 
-      unitPrice: '' 
+      unitPrice: '',
+      sellingPrice: ''
     }]
   });
   
@@ -99,7 +100,8 @@ const CreateGRN = ({ url }) => {
         name: selectedItem.name,
         category: 'Cake Ingredients',
         // Keep existing quantity
-        unitPrice: ''
+        unitPrice: '',
+        sellingPrice: ''
       };
     } else {
       // For existing items
@@ -109,7 +111,8 @@ const CreateGRN = ({ url }) => {
         name: selectedItem.name,
         category: selectedItem.category,
         // Keep existing quantity
-        unitPrice: updatedItems[index].unitPrice || selectedItem.price
+        unitPrice: updatedItems[index].unitPrice || selectedItem.cost_price || '',
+        sellingPrice: updatedItems[index].sellingPrice || selectedItem.selling_price || ''
       };
     }
     
@@ -129,7 +132,8 @@ const CreateGRN = ({ url }) => {
           name: '', 
           category: 'Cake Ingredients', 
           quantity: 1, 
-          unitPrice: '' 
+          unitPrice: '',
+          sellingPrice: ''
         }
       ]
     });
@@ -200,71 +204,70 @@ const CreateGRN = ({ url }) => {
     return true;
   };
 
-  // Update the handleSubmit function in CreateGRN.jsx to include better debugging:
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  if (!validateForm()) {
-    return;
-  }
-  
-  try {
-    setSubmitting(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     
-    // Format data to match backend expectations
-    const submitData = {
-      supplier_id: parseInt(formData.supplierId),
-      po_reference: formData.referenceNumber,         // Changed field name
-      received_date: formData.deliveryDate,           // Changed field name
-      notes: formData.notes,
-      items: formData.items.map(item => ({
-        item_id: item.itemId ? parseInt(item.itemId) : null,
-        name: item.name,
-        category: item.category,
-        received_quantity: parseInt(item.quantity),    // Changed field name
-        unit_price: parseFloat(item.unitPrice)
-      }))
-    };
+    if (!validateForm()) {
+      return;
+    }
     
-    console.log("Submitting GRN data:", submitData);
-    
-    const response = await axios.post(
-      `${url}/api/grn/create`,                         // Correct endpoint
-      submitData,
-      { 
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
+    try {
+      setSubmitting(true);
+      
+      // Format data to match backend expectations
+      const submitData = {
+        supplier_id: parseInt(formData.supplierId),
+        po_reference: formData.referenceNumber,
+        received_date: formData.deliveryDate,
+        notes: formData.notes,
+        items: formData.items.map(item => ({
+          item_id: item.itemId ? parseInt(item.itemId) : null,
+          name: item.name,
+          category: item.category,
+          received_quantity: parseInt(item.quantity),
+          unit_price: parseFloat(item.unitPrice),
+          selling_price: item.sellingPrice ? parseFloat(item.sellingPrice) : null
+        }))
+      };
+      
+      console.log("Submitting GRN data:", submitData);
+      
+      const response = await axios.post(
+        `${url}/api/grn/create`,
+        submitData,
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
+      );
+      
+      console.log("GRN response:", response.data);
+      
+      if (response.data.success) {
+        toast.success("GRN created successfully");
+        navigate('/grn');
+      } else {
+        toast.error(response.data.message || "Failed to create GRN");
       }
-    );
-    
-    console.log("GRN response:", response.data);
-    
-    if (response.data.success) {
-      toast.success("GRN created successfully");
-      navigate('/grn');
-    } else {
-      toast.error(response.data.message || "Failed to create GRN");
+    } catch (err) {
+      console.error("Error creating GRN:", err);
+      
+      if (err.response) {
+        console.error("Server response error:", err.response.data);
+        toast.error(err.response.data?.message || "Error creating GRN");
+      } else if (err.request) {
+        console.error("No response received", err.request);
+        toast.error("No response from server. Please check your connection");
+      } else {
+        console.error("Request error:", err.message);
+        toast.error(`Error creating GRN: ${err.message}`);
+      }
+    } finally {
+      setSubmitting(false);
     }
-  } catch (err) {
-    console.error("Error creating GRN:", err);
-    
-    if (err.response) {
-      console.error("Server response error:", err.response.data);
-      toast.error(err.response.data?.message || "Error creating GRN");
-    } else if (err.request) {
-      console.error("No response received", err.request);
-      toast.error("No response from server. Please check your connection");
-    } else {
-      console.error("Request error:", err.message);
-      toast.error(`Error creating GRN: ${err.message}`);
-    }
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   return (
     <div className="create-grn-container">
@@ -300,7 +303,7 @@ const handleSubmit = async (e) => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="referenceNumber">Reference Number</label>
+              <label htmlFor="referenceNumber">Invoice Number</label>
               <input
                 type="text"
                 id="referenceNumber"
@@ -313,7 +316,7 @@ const handleSubmit = async (e) => {
             </div>
             
             <div className="form-group">
-              <label htmlFor="deliveryDate">Delivery Date</label>
+              <label htmlFor="deliveryDate">Purchased Date</label>
               <input
                 type="date"
                 id="deliveryDate"
@@ -357,6 +360,7 @@ const handleSubmit = async (e) => {
                     <th>Category</th>
                     <th>Quantity</th>
                     <th>Unit Price (LKR)</th>
+                    <th>Selling Price (LKR)</th>
                     <th>Total (LKR)</th>
                     <th>Action</th>
                   </tr>
@@ -365,12 +369,10 @@ const handleSubmit = async (e) => {
                   {formData.items.map((item, index) => (
                     <tr key={index}>
                       <td className="search-dropdown-cell">
-                        {/* Replace select with SearchDropdown component */}
                         <SearchDropdown 
                           allItems={items}
                           onItemSelect={(selectedItem) => handleSearchItemSelect(index, selectedItem)}
                         />
-                        {/* Display selected item name as readonly if already selected */}
                         {item.name && (
                           <input
                             type="text"
@@ -412,6 +414,16 @@ const handleSubmit = async (e) => {
                           required
                         />
                       </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={item.sellingPrice}
+                          onChange={(e) => handleItemChange(index, 'sellingPrice', e.target.value)}
+                          step="0.01"
+                          min="0.01"
+                          placeholder="0.00"
+                        />
+                      </td>
                       <td className="item-total">
                         {((item.quantity || 0) * (parseFloat(item.unitPrice) || 0)).toFixed(2)}
                       </td>
@@ -429,7 +441,7 @@ const handleSubmit = async (e) => {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <td colSpan="4" className="total-label">Total Amount:</td>
+                    <td colSpan="5" className="total-label">Total Amount:</td>
                     <td colSpan="2" className="total-value">LKR {calculateTotal().toFixed(2)}</td>
                   </tr>
                 </tfoot>
