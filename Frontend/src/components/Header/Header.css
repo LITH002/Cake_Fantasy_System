@@ -42,6 +42,13 @@
     margin-top: 1vw;
 }
 
+.view-btn:hover{
+        cursor: pointer;
+        background-color: #a48c8c;
+        color: white;
+    }
+
+
 @media (max-width: 1050px) {
     .header-contents{
         max-width: 45%;

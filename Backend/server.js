@@ -14,6 +14,8 @@ import adminRouter from './routes/adminRoute.js';
 import { createAdminTable } from './models/adminModel.js';
 import supplierRouter from './routes/supplierRoute.js';
 import grnRouter from './routes/grnRoute.js';
+import router from "./routes/reviewRoute.js";
+import createReviewsTable from "./models/reviewModel.js";
 
 const app = express();
 const port = 4000;
@@ -41,46 +43,23 @@ app.use("/api/order", orderRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/supplier', supplierRouter);
 app.use('/api/grn', grnRouter);
+app.use('/api/review', router);
 
-// Add this to your server.js
-
-// DEBUG: Display all registered routes
-app.get('/debug/routes', (req, res) => {
-  const routes = [];
-  
-  app._router.stack.forEach(middleware => {
-    if (middleware.route) {
-      // Routes registered directly on app
-      routes.push({
-        path: middleware.route.path,
-        methods: Object.keys(middleware.route.methods).join(', ').toUpperCase()
-      });
-    } else if (middleware.name === 'router') {
-      // Routes added via router
-      middleware.handle.stack.forEach(handler => {
-        if (handler.route) {
-          let base = '';
-          if (middleware.regexp) {
-            // Extract the base path
-            const path = middleware.regexp.toString();
-            const match = path.match(/^\/\^\\\/([^\\]+)/);
-            if (match) {
-              base = '/' + match[1];
-            }
-          }
-          routes.push({
-            path: base + handler.route.path,
-            methods: Object.keys(handler.route.methods).join(', ').toUpperCase()
-          });
-        }
-      });
-    }
-  });
-  
-  res.json({
-    count: routes.length,
-    routes: routes.sort((a, b) => a.path.localeCompare(b.path))
-  });
+// Add this temporary debug endpoint
+app.get('/debug/user-structure', async (req, res) => {
+  try {
+    const [columns] = await db.query('SHOW COLUMNS FROM users');
+    res.json({
+      success: true,
+      columns: columns.map(col => col.Field)
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching table structure',
+      error: error.message
+    });
+  }
 });
 
 // Async server startup
@@ -91,7 +70,8 @@ const startServer = async () => {
       userTables(),
       createItemTable(),
       createOrderTables(),
-      createAdminTable()
+      createAdminTable(),
+      createReviewsTable()
     ]);
     
     app.listen(port, () => {

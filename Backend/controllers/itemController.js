@@ -165,6 +165,8 @@ const listItem = async (req, res) => {
         const [results] = await db.query(
             "SELECT * FROM items WHERE disabled = FALSE OR disabled IS NULL"
         );
+
+        
         res.json({ success: true, data: results });
     } catch (error) {
         console.error("Error listing items:", error);
@@ -192,6 +194,18 @@ const getItem = async (req, res) => {
                 message: "Item not found" 
             });
         }
+
+        // Get the item's average rating from reviews
+        const [reviews] = await db.query(
+            `SELECT AVG(rating) as average_rating 
+            FROM reviews 
+            WHERE item_id = ?`,
+            [itemId]
+        );
+
+        // Add rating to the item data
+        const itemData = items[0];
+        itemData.rating = reviews[0].average_rating || 0;
         
         res.json({ 
             success: true, 

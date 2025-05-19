@@ -154,9 +154,9 @@ const Order = {
           i.id,
           i.name,
           i.image,
-          i.price,
+          i.selling_price as price,
           oi.quantity,
-          (i.price * oi.quantity) as total_price
+          (i.selling_price * oi.quantity) as total_price
         FROM order_items oi
         JOIN items i ON oi.item_id = i.id
         WHERE oi.order_id = ?
