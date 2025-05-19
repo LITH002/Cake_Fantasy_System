@@ -1,7 +1,9 @@
 import express from "express";
-import { addItem, getItem, listItem, removeItem, updateItem } from "../controllers/itemController.js"; 
+import { addItem, getItem, listItem, removeItem, updateItem, generateBarcode } from "../controllers/itemController.js"; 
 import multer from "multer";
 import connectCloudinary from "../config/cloudinary.js";
+import authMiddleware from "../middleware/auth.js";
+import adminMiddleware from "../middleware/admin.js";
 
 const itemRouter = express.Router();
 
@@ -49,22 +51,15 @@ const handleUploadErrors = (err, req, res, next) => {
 };
 
 // API routes
-
+// Public routes
 itemRouter.get("/list", listItem);
 itemRouter.get("/:id", getItem);
 
-itemRouter.post("/add", 
-  upload.single("image"), 
-  handleUploadErrors, 
-  addItem
-);
-
-itemRouter.post("/update", 
-  upload.single("image"), 
-  handleUploadErrors, 
-  updateItem
-);
-
-itemRouter.post("/remove", removeItem); 
+// Admin-only routes (protected)
+itemRouter.use(authMiddleware, adminMiddleware());
+itemRouter.post("/add", upload.single("image"), handleUploadErrors, addItem);
+itemRouter.put("/update", upload.single("image"), handleUploadErrors, updateItem);
+itemRouter.delete("/remove", removeItem); 
+itemRouter.get("/barcode/:item_id", generateBarcode);
 
 export default itemRouter;

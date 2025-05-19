@@ -17,6 +17,8 @@ import GRNDetails from './Pages/GRN/GRNDetails';
 import SupplierList from './Pages/Supplier/SupplierList';
 import AddSupplier from './Pages/Supplier/AddSupplier';
 import EditSupplier from './Pages/Supplier/EditSupplier';
+import ItemBarcode from './Pages/ItemBarcode/ItemBarcode';
+import BulkBarcodePrint from './Components/BulkBarcodePrint/BulkBarcodePrint';
 
 // Layout component to wrap authenticated routes
 const AdminLayout = ({ children }) => {
@@ -64,6 +66,24 @@ const AppRoutes = () => {
           </AdminLayout>
         </ProtectedRoute>
       } />
+
+      <Route 
+        path="/item-barcode/:itemId" 
+        element={
+          <ProtectedRoute>
+            <ItemBarcode url={url} />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/bulk-barcode" 
+        element={
+          <ProtectedRoute>
+            <BulkBarcodePrint url={url} />
+          </ProtectedRoute>
+        } 
+      />
       
       <Route path="/orders" element={
         <ProtectedRoute requiredRole="employee">

@@ -1,32 +1,108 @@
 import db from "../config/db.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/cloudinaryUpload.js";
+import { generateSKU } from "../models/itemModel.js";
 
 // Add Item
 const addItem = async (req, res) => {
     try {
-        const { name, description, price, category } = req.body;
+        const { 
+            name, 
+            description, 
+            category, 
+            barcode, 
+            customSKU, 
+            cost_price 
+        } = req.body;
 
-        if (!name || !description || !price || !category || !req.file) {
+        // Validate required fields
+        if (!name || !category) {
             return res.status(400).json({ 
                 success: false,
-                message: "All fields are required" 
+                message: "Name and category are required" 
             });
         }
 
-        // Upload image to Cloudinary
-        const imageResult = await uploadToCloudinary(req.file.buffer);
+        // Generate or validate SKU
+        let sku;
+        if (barcode) {
+            // Check if barcode is already in use
+            const [existingBarcode] = await db.query(
+                "SELECT id FROM items WHERE barcode = ? OR sku = ? LIMIT 1",
+                [barcode, barcode]
+            );
+            
+            if (existingBarcode.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Barcode already in use"
+                });
+            }
+            
+            sku = barcode; // Use barcode as SKU
+        } else if (customSKU) {
+            // Check if custom SKU is already in use
+            const [existingSKU] = await db.query(
+                "SELECT id FROM items WHERE sku = ? LIMIT 1",
+                [customSKU]
+            );
+            
+            if (existingSKU.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Custom SKU already in use"
+                });
+            }
+            
+            sku = customSKU;
+        } else {
+            // Generate a new SKU
+            sku = await generateSKU(category);
+        }
 
-        // Save Cloudinary details in the database
+        // Default values
+        const costPrice = parseFloat(cost_price) || 0;
+        let imageUrl = null;
+        let cloudinaryId = null;
+
+        // Upload image to Cloudinary if provided
+        if (req.file) {
+            const imageResult = await uploadToCloudinary(req.file.buffer);
+            imageUrl = imageResult.secure_url;
+            cloudinaryId = imageResult.public_id;
+        }
+
+        // Save item in the database
         const [result] = await db.query(
-            "INSERT INTO items (name, description, price, image, category, cloudinary_id) VALUES (?, ?, ?, ?, ?, ?)",
-            [name, description, price, imageResult.secure_url, category, imageResult.public_id]
+            `INSERT INTO items (
+                name, 
+                description, 
+                category, 
+                sku, 
+                barcode, 
+                cost_price, 
+                selling_price, 
+                image, 
+                cloudinary_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                name, 
+                description, 
+                category, 
+                sku, 
+                barcode || null, 
+                costPrice, 
+                costPrice, // Initial selling price same as cost price
+                imageUrl, 
+                cloudinaryId
+            ]
         );
 
         res.status(201).json({ 
             success: true,
             message: "Item added successfully", 
             itemId: result.insertId,
-            imageUrl: imageResult.secure_url
+            sku: sku,
+            imageUrl: imageUrl
         });
 
     } catch (error) {
@@ -42,13 +118,180 @@ const addItem = async (req, res) => {
 // List Items (returns non-disabled items)
 const listItem = async (req, res) => {
     try {
-        const [results] = await db.query("SELECT * FROM items WHERE disabled = FALSE OR disabled IS NULL");
+        const [results] = await db.query(
+            "SELECT * FROM items WHERE disabled = FALSE OR disabled IS NULL"
+        );
         res.json({ success: true, data: results });
     } catch (error) {
         console.error("Error listing items:", error);
         res.status(500).json({ 
             success: false,
             message: "Error listing items",
+            error: error.message 
+        });
+    }
+};
+
+// Get item details
+const getItem = async (req, res) => {
+    try {
+        const itemId = req.params.id;
+        
+        const [items] = await db.query(
+            "SELECT * FROM items WHERE id = ?", 
+            [itemId]
+        );
+        
+        if (!items.length) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Item not found" 
+            });
+        }
+        
+        res.json({ 
+            success: true, 
+            data: items[0] 
+        });
+    } catch (error) {
+        console.error("Error fetching item:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Error fetching item",
+            error: error.message 
+        });
+    }
+};
+
+// Update Item
+const updateItem = async (req, res) => {
+    try {
+        const { item_id, name, description, category, barcode, customSKU, cost_price } = req.body;
+        let cloudinaryResult = null;
+
+        if (!item_id) {
+            return res.status(400).json({ 
+                success: false,
+                message: "Item ID is required" 
+            });
+        }
+
+        // Check if item exists and get current values
+        const [items] = await db.query(
+            "SELECT * FROM items WHERE id = ?", 
+            [item_id]
+        );
+
+        if (!items.length) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Item not found" 
+            });
+        }
+
+        // Use existing values if not provided in the request
+        const currentItem = items[0];
+        const updatedName = name || currentItem.name;
+        const updatedDescription = description || currentItem.description;
+        const updatedCategory = category || currentItem.category;
+        const updatedCostPrice = cost_price ? parseFloat(cost_price) : currentItem.cost_price;
+        
+        // Handle SKU/barcode update
+        let updatedSKU = currentItem.sku;
+        let updatedBarcode = currentItem.barcode;
+        
+        if (barcode && barcode !== currentItem.barcode) {
+            // Check if new barcode is already in use
+            const [existingBarcode] = await db.query(
+                "SELECT id FROM items WHERE (barcode = ? OR sku = ?) AND id != ? LIMIT 1",
+                [barcode, barcode, item_id]
+            );
+            
+            if (existingBarcode.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Barcode already in use by another item"
+                });
+            }
+            
+            updatedBarcode = barcode;
+        }
+        
+        if (customSKU && customSKU !== currentItem.sku) {
+            // Check if new custom SKU is already in use
+            const [existingSKU] = await db.query(
+                "SELECT id FROM items WHERE sku = ? AND id != ? LIMIT 1",
+                [customSKU, item_id]
+            );
+            
+            if (existingSKU.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Custom SKU already in use by another item"
+                });
+            }
+            
+            updatedSKU = customSKU;
+        }
+
+        // If a new image is uploaded, update it in Cloudinary
+        let updatedImageUrl = currentItem.image;
+        let updatedCloudinaryId = currentItem.cloudinary_id;
+        
+        if (req.file) {
+            // Delete old image from Cloudinary if it exists
+            if (currentItem.cloudinary_id) {
+                try {
+                    await deleteFromCloudinary(currentItem.cloudinary_id);
+                } catch (cloudinaryErr) {
+                    console.error("Error deleting old image from Cloudinary:", cloudinaryErr);
+                    // Continue anyway
+                }
+            }
+            
+            // Upload new image to Cloudinary
+            cloudinaryResult = await uploadToCloudinary(req.file.buffer);
+            updatedImageUrl = cloudinaryResult.secure_url;
+            updatedCloudinaryId = cloudinaryResult.public_id;
+        }
+
+        // Update the item in the database
+        await db.query(
+            `UPDATE items SET 
+                name = ?, 
+                description = ?,
+                category = ?,
+                sku = ?,
+                barcode = ?,
+                cost_price = ?,
+                image = ?,
+                cloudinary_id = ?
+            WHERE id = ?`,
+            [
+                updatedName,
+                updatedDescription,
+                updatedCategory,
+                updatedSKU,
+                updatedBarcode,
+                updatedCostPrice,
+                updatedImageUrl,
+                updatedCloudinaryId,
+                item_id
+            ]
+        );
+
+        res.json({ 
+            success: true, 
+            message: "Item updated successfully",
+            sku: updatedSKU,
+            imageUrl: updatedImageUrl
+        });
+
+    } catch (error) {
+        console.error("Error updating item:", error);
+        res.status(500).json({ 
+            success: false,
+            message: "Error updating item",
             error: error.message 
         });
     }
@@ -100,113 +343,46 @@ const removeItem = async (req, res) => {
     }
 };
 
-// Get item to update
-const getItem = async (req, res) => {
+// Generate barcode/label for printing
+const generateBarcode = async (req, res) => {
     try {
-        const itemId = req.params.id;
+        const { item_id } = req.params;
         
+        // Get item details
         const [items] = await db.query(
-            "SELECT * FROM items WHERE id = ?", 
-            [itemId]
-        );
-        
-        if (!items.length) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Item not found" 
-            });
-        }
-        
-        res.json({ 
-            success: true, 
-            data: items[0] 
-        });
-    } catch (error) {
-        console.error("Error fetching item:", error);
-        res.status(500).json({ 
-            success: false,
-            message: "Error fetching item",
-            error: error.message 
-        });
-    }
-};
-
-// Update Item
-// Update Item
-const updateItem = async (req, res) => {
-    try {
-        const { item_id } = req.body;
-        let { name, description, price } = req.body;
-        let cloudinaryResult = null;
-
-        if (!item_id) {
-            return res.status(400).json({ 
-                success: false,
-                message: "Item ID is required" 
-            });
-        }
-
-        // Check if item exists and get current values
-        const [items] = await db.query(
-            "SELECT * FROM items WHERE id = ?", 
+            "SELECT id, name, sku, barcode, category, selling_price FROM items WHERE id = ?",
             [item_id]
         );
-
+        
         if (!items.length) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Item not found" 
+            return res.status(404).json({
+                success: false,
+                message: "Item not found"
             });
         }
-
-        // Use existing values if not provided in the request
-        const currentItem = items[0];
-        name = name || currentItem.name;
-        description = description || currentItem.description;
-        price = price || currentItem.price;
-        const category = currentItem.category; // Always use existing category
-
-        // If a new image is uploaded, update it in Cloudinary
-        if (req.file) {
-            // Delete old image from Cloudinary if it exists
-            if (currentItem.cloudinary_id) {
-                try {
-                    await deleteFromCloudinary(currentItem.cloudinary_id);
-                } catch (cloudinaryErr) {
-                    console.error("Error deleting old image from Cloudinary:", cloudinaryErr);
-                    // Continue anyway
-                }
-            }
-            
-            // Upload new image to Cloudinary
-            cloudinaryResult = await uploadToCloudinary(req.file.buffer);
-        }
-
-        // Update the item in the database
-        const updateQuery = cloudinaryResult
-            ? "UPDATE items SET name = ?, description = ?, price = ?, image = ?, cloudinary_id = ? WHERE id = ?"
-            : "UPDATE items SET name = ?, description = ?, price = ? WHERE id = ?";
         
-        const updateParams = cloudinaryResult
-            ? [name, description, price, cloudinaryResult.secure_url, cloudinaryResult.public_id, item_id]
-            : [name, description, price, item_id];
-
-        await db.query(updateQuery, updateParams);
-
-        res.json({ 
-            success: true, 
-            message: "Item updated successfully",
-            imageUrl: cloudinaryResult ? cloudinaryResult.secure_url : currentItem.image
+        const item = items[0];
+        
+        // Return data needed for barcode generation
+        res.json({
+            success: true,
+            data: {
+                id: item.id,
+                name: item.name,
+                sku: item.sku,
+                barcode: item.barcode || item.sku, // Use SKU if no barcode
+                category: item.category,
+                selling_price: item.selling_price
+            }
         });
-
     } catch (error) {
-        console.error("Error updating item:", error);
-        res.status(500).json({ 
+        console.error("Error generating barcode data:", error);
+        res.status(500).json({
             success: false,
-            message: "Error updating item",
-            error: error.message 
+            message: "Error generating barcode data",
+            error: error.message
         });
     }
 };
 
-export { addItem, listItem, removeItem, updateItem, getItem };
+export { addItem, listItem, removeItem, updateItem, getItem, generateBarcode };

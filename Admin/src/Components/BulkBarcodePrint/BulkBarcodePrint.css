@@ -1,0 +1,142 @@
+.bulk-barcode-container {
+  padding: 20px;
+}
+
+.bulk-barcode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.bulk-barcode-header h2 {
+  margin: 0;
+  color: #591b0d;
+}
+
+.bulk-print-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.search-filter {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-filter input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.copies-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.copies-control input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.print-selected-btn {
+  padding: 8px 16px;
+  background-color: #591b0d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.print-selected-btn:hover {
+  background-color: #7a2917;
+}
+
+.print-selected-btn:disabled {
+  background-color: #d3d3d3;
+  cursor: not-allowed;
+}
+
+.items-table-container {
+  overflow-x: auto;
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.items-table th,
+.items-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.items-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.items-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.no-items-message {
+  text-align: center;
+  padding: 20px !important;
+  color: #6c757d;
+}
+
+.bulk-barcode-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #591b0d;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .bulk-print-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .copies-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .print-selected-btn {
+    width: 100%;
+  }
+}
