@@ -58,8 +58,8 @@ itemRouter.get("/:id", getItem);
 // Admin-only routes (protected)
 itemRouter.use(authMiddleware, adminMiddleware());
 itemRouter.post("/add", upload.single("image"), handleUploadErrors, addItem);
-itemRouter.put("/update", upload.single("image"), handleUploadErrors, updateItem);
-itemRouter.delete("/remove", removeItem); 
+itemRouter.post("/update", upload.single("image"), handleUploadErrors, updateItem);
+itemRouter.post("/remove", removeItem); 
 itemRouter.get("/barcode/:item_id", generateBarcode);
 
 export default itemRouter;

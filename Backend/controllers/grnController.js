@@ -21,6 +21,33 @@ export const createGRN = async (req, res) => {
           message: "Each item must have item_id, received_quantity, and unit_price"
         });
       }
+
+      const [itemDetails] = await connection.query(
+        "SELECT is_loose, min_order_quantity, increment_step FROM items WHERE id = ?",
+        [item.item_id]
+      );
+      
+      if (itemDetails.length > 0 && itemDetails[0].is_loose) {
+        const receivedQty = parseFloat(item.received_quantity);
+        const minQty = parseFloat(itemDetails[0].min_order_quantity);
+        const step = parseFloat(itemDetails[0].increment_step);
+        
+        // Check minimum quantity
+        if (receivedQty < minQty) {
+          return res.status(400).json({
+            success: false,
+            message: `Item #${item.item_id} has a minimum quantity of ${minQty}`
+          });
+        }
+        
+        // Check increment step
+        if ((receivedQty - minQty) % step !== 0) {
+          return res.status(400).json({
+            success: false,
+            message: `Item #${item.item_id} must be ordered in increments of ${step} starting from ${minQty}`
+          });
+        }
+      }
     }
     
     const result = await GRN.create({

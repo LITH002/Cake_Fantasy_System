@@ -11,7 +11,16 @@ const addItem = async (req, res) => {
             category, 
             barcode, 
             customSKU, 
-            cost_price 
+            cost_price,
+            selling_price,
+            unit,
+            is_loose,
+            min_order_quantity,
+            increment_step,
+            weight_value,
+            weight_unit,
+            pieces_per_pack,
+            reorder_level
         } = req.body;
 
         // Validate required fields
@@ -59,8 +68,27 @@ const addItem = async (req, res) => {
             sku = await generateSKU(category);
         }
 
-        // Default values
+        // Default values and type conversions
         const costPrice = parseFloat(cost_price) || 0;
+        const sellingPrice = parseFloat(selling_price) || costPrice;
+        const reorderQty = parseInt(reorder_level) || 5;
+        const isLoose = is_loose === 'true' || is_loose === true;
+        const minOrderQty = parseFloat(min_order_quantity) || (isLoose ? 10 : 1);
+        const incrementStep = parseFloat(increment_step) || (isLoose ? 5 : 1);
+        const weightVal = weight_value ? parseFloat(weight_value) : null;
+        const piecesPerPk = pieces_per_pack ? parseInt(pieces_per_pack) : null;
+        
+        // Validate weight unit if weight value is provided
+        let weightUnitValue = null;
+        if (weightVal) {
+            if (weight_unit && (weight_unit === 'g' || weight_unit === 'ml')) {
+                weightUnitValue = weight_unit;
+            } else {
+                // Default weight unit based on category
+                weightUnitValue = category.toLowerCase().includes('liquid') ? 'ml' : 'g';
+            }
+        }
+
         let imageUrl = null;
         let cloudinaryId = null;
 
@@ -80,18 +108,34 @@ const addItem = async (req, res) => {
                 sku, 
                 barcode, 
                 cost_price, 
-                selling_price, 
+                selling_price,
+                unit,
+                is_loose,
+                min_order_quantity,
+                increment_step,
+                weight_value,
+                weight_unit,
+                pieces_per_pack,
+                reorder_level,
                 image, 
                 cloudinary_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 name, 
-                description, 
+                description || '', 
                 category, 
                 sku, 
                 barcode || null, 
                 costPrice, 
-                costPrice, // Initial selling price same as cost price
+                sellingPrice,
+                unit || 'piece',
+                isLoose,
+                minOrderQty,
+                incrementStep,
+                weightVal,
+                weightUnitValue,
+                piecesPerPk,
+                reorderQty,
                 imageUrl, 
                 cloudinaryId
             ]
@@ -166,7 +210,25 @@ const getItem = async (req, res) => {
 // Update Item
 const updateItem = async (req, res) => {
     try {
-        const { item_id, name, description, category, barcode, customSKU, cost_price } = req.body;
+        const { 
+            item_id, 
+            name, 
+            description, 
+            category, 
+            barcode, 
+            customSKU, 
+            cost_price,
+            selling_price,
+            unit,
+            is_loose,
+            min_order_quantity,
+            increment_step,
+            weight_value,
+            weight_unit,
+            pieces_per_pack,
+            reorder_level
+        } = req.body;
+        
         let cloudinaryResult = null;
 
         if (!item_id) {
@@ -192,9 +254,32 @@ const updateItem = async (req, res) => {
         // Use existing values if not provided in the request
         const currentItem = items[0];
         const updatedName = name || currentItem.name;
-        const updatedDescription = description || currentItem.description;
+        const updatedDescription = description !== undefined ? description : currentItem.description;
         const updatedCategory = category || currentItem.category;
         const updatedCostPrice = cost_price ? parseFloat(cost_price) : currentItem.cost_price;
+        const updatedSellingPrice = selling_price ? parseFloat(selling_price) : currentItem.selling_price;
+        
+        // Unit-related properties with defaults from current values
+        const updatedUnit = unit || currentItem.unit;
+        const updatedIsLoose = is_loose !== undefined ? 
+            (is_loose === 'true' || is_loose === true) : 
+            currentItem.is_loose;
+        const updatedMinOrderQty = min_order_quantity !== undefined ? 
+            parseFloat(min_order_quantity) : 
+            currentItem.min_order_quantity;
+        const updatedIncrementStep = increment_step !== undefined ? 
+            parseFloat(increment_step) : 
+            currentItem.increment_step;
+        const updatedWeightValue = weight_value !== undefined ?
+            (weight_value ? parseFloat(weight_value) : null) :
+            currentItem.weight_value;
+        const updatedWeightUnit = weight_unit || currentItem.weight_unit;
+        const updatedPiecesPack = pieces_per_pack !== undefined ?
+            (pieces_per_pack ? parseInt(pieces_per_pack) : null) :
+            currentItem.pieces_per_pack;
+        const updatedReorderLevel = reorder_level !== undefined ?
+            parseInt(reorder_level) : 
+            currentItem.reorder_level;
         
         // Handle SKU/barcode update
         let updatedSKU = currentItem.sku;
@@ -255,7 +340,7 @@ const updateItem = async (req, res) => {
             updatedCloudinaryId = cloudinaryResult.public_id;
         }
 
-        // Update the item in the database
+        // Update the item in the database with all fields
         await db.query(
             `UPDATE items SET 
                 name = ?, 
@@ -264,6 +349,15 @@ const updateItem = async (req, res) => {
                 sku = ?,
                 barcode = ?,
                 cost_price = ?,
+                selling_price = ?,
+                unit = ?,
+                is_loose = ?,
+                min_order_quantity = ?,
+                increment_step = ?,
+                weight_value = ?,
+                weight_unit = ?,
+                pieces_per_pack = ?,
+                reorder_level = ?,
                 image = ?,
                 cloudinary_id = ?
             WHERE id = ?`,
@@ -274,6 +368,15 @@ const updateItem = async (req, res) => {
                 updatedSKU,
                 updatedBarcode,
                 updatedCostPrice,
+                updatedSellingPrice,
+                updatedUnit,
+                updatedIsLoose,
+                updatedMinOrderQty,
+                updatedIncrementStep,
+                updatedWeightValue,
+                updatedWeightUnit,
+                updatedPiecesPack,
+                updatedReorderLevel,
                 updatedImageUrl,
                 updatedCloudinaryId,
                 item_id

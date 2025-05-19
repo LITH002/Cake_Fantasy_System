@@ -100,7 +100,7 @@
   font-weight: 500;
   color: #591b0d;
   display: inline-block;
-  width: 80px;
+  width: 100px;
 }
 
 /* Form section */
@@ -108,6 +108,7 @@
   flex: 2;
   display: flex;
   flex-direction: column;
+  gap: 20px;
 }
 
 .form-section {
@@ -115,7 +116,6 @@
   border-radius: 8px;
   padding: 25px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
 }
 
 .form-section h3 {
@@ -123,6 +123,8 @@
   margin-top: 0;
   margin-bottom: 20px;
   font-size: 18px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
 }
 
 .form-group {
@@ -160,6 +162,46 @@
 .form-group textarea {
   min-height: 120px;
   resize: vertical;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.half-width {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.checkbox-label span {
+  font-weight: 500;
+  color: #444;
+}
+
+.form-helper-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
 }
 
 .category-display {
@@ -201,17 +243,17 @@
 }
 
 .custom-file-input {
-    color: white;
-    background-color: lightgray;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    font-size: 14px;
+  color: white;
+  background-color: #591b0d;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
 }
 
 .custom-file-input:hover {
-  background-color: #efe8e3;
+  background-color: #7a2917;
 }
 
 .file-name {

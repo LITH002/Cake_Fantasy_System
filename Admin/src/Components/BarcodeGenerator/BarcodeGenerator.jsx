@@ -7,6 +7,11 @@ const BarcodeGenerator = ({
   name, 
   price, 
   sku, 
+  unit,
+  weight_value,
+  weight_unit,
+  is_loose,
+  min_order_quantity,
   width = 2, 
   height = 100, 
   fontSize = 14,
@@ -47,6 +52,16 @@ const BarcodeGenerator = ({
     if (barcodeContainerRef.current) {
       const printWindow = window.open('', '_blank');
       
+      // Prepare additional info text
+      let additionalInfo = '';
+      if (weight_value && weight_unit) {
+        additionalInfo += `<div class="barcode-weight">${weight_value}${weight_unit}</div>`;
+      }
+      
+      if (is_loose) {
+        additionalInfo += `<div class="barcode-loose">Min: ${min_order_quantity} ${unit}</div>`;
+      }
+      
       printWindow.document.write(`
         <html>
           <head>
@@ -82,6 +97,16 @@ const BarcodeGenerator = ({
                 font-weight: bold;
                 margin-top: 5px;
               }
+              .barcode-weight {
+                font-size: 12px;
+                color: #444;
+                margin-top: 2px;
+              }
+              .barcode-loose {
+                font-size: 12px;
+                color: #444;
+                margin-top: 2px;
+              }
               @media print {
                 body {
                   width: 58mm; /* Standard receipt width */
@@ -100,6 +125,7 @@ const BarcodeGenerator = ({
               ${name ? `<div class="barcode-name">${name}</div>` : ''}
               ${sku ? `<div class="barcode-sku">SKU: ${sku}</div>` : ''}
               <img src="${canvasRef.current.toDataURL('image/png')}" />
+              ${additionalInfo}
               ${price ? `<div class="barcode-price">LKR ${parseFloat(price).toFixed(2)}</div>` : ''}
             </div>
             <script>
@@ -122,6 +148,15 @@ const BarcodeGenerator = ({
         {name && <div className="barcode-name">{name}</div>}
         {sku && <div className="barcode-sku">SKU: {sku}</div>}
         <canvas ref={canvasRef} className="barcode-canvas"></canvas>
+        
+        {weight_value && weight_unit && (
+          <div className="barcode-weight">{weight_value}{weight_unit}</div>
+        )}
+        
+        {is_loose && (
+          <div className="barcode-loose">Min: {min_order_quantity} {unit}</div>
+        )}
+        
         {price && <div className="barcode-price">LKR {parseFloat(price).toFixed(2)}</div>}
       </div>
       <button className="print-barcode-btn" onClick={handlePrint}>

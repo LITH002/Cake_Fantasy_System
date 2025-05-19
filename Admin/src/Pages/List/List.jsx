@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './List.css';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import ConfirmDialog from '../../Components/ConfirmDialog/ConfirmDialog';
+import { AdminAuthContext } from '../../context/AdminAuthContext';
 
 const List = ({url}) => {
   const [list, setList] = useState([]);
@@ -12,11 +13,16 @@ const List = ({url}) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+  const { token } = useContext(AdminAuthContext);
 
   const fetchList = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${url}/api/item/list`);
+      const response = await axios.get(`${url}/api/item/list`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (response.data.success) {
         setList(response.data.data);
       } else {
@@ -44,7 +50,15 @@ const List = ({url}) => {
     if (!itemToDelete) return;
     
     try {
-      const response = await axios.post(`${url}/api/item/remove`, { item_id: itemToDelete.id });
+      const response = await axios.post(`${url}/api/item/remove`, 
+        { item_id: itemToDelete.id },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
       if (response.data.success) {
         toast.success(response.data.message);
         // Refresh the list after successful removal
@@ -124,21 +138,37 @@ const List = ({url}) => {
             <b>Category</b>
             <b>SKU</b>
             <b>Price</b>
+            <b>Stock</b>
             <b>Actions</b>
           </div>
 
           {filteredItems.length > 0 ? (
-            filteredItems.map((item, index) => {
+            filteredItems.map((item) => {
               // Determine which price to display, prioritizing selling_price
-              const displayPrice = item.selling_price || item.cost_price || item.price || 0;
+              const displayPrice = item.selling_price || item.cost_price;
               
+              // Format the stock information based on loose/non-loose
+              const stockDisplay = item.is_loose 
+                ? `${parseFloat(item.stock_quantity).toFixed(1)} ${item.unit}`
+                : Math.floor(item.stock_quantity);
+                
+              // Add reorder level indicator
+              const isLowStock = parseFloat(item.stock_quantity) <= parseFloat(item.reorder_level);
+                
               return (
-                <div key={index} className='list-table-format'>
+                <div className="list-table-format" key={item.id}>
                   <img src={item.image} alt={item.name} />
-                  <p className="item-name">{item.name}</p>
+                  <p className="item-name">
+                    {item.name}
+                    {item.weight_value && <span className="item-weight">({item.weight_value}{item.weight_unit})</span>}
+                  </p>
                   <p className="item-category">{item.category}</p>
                   <p className="item-sku">{item.sku || 'No SKU'}</p>
                   <p className="item-price">LKR {parseFloat(displayPrice).toFixed(2)}</p>
+                  <p className={`item-stock ${isLowStock ? 'low-stock' : ''}`}>
+                    {stockDisplay}
+                    {isLowStock && <span className="reorder-indicator">Low</span>}
+                  </p>
                   <div className="action-buttons">
                     <button 
                       className="edit-btn" 
