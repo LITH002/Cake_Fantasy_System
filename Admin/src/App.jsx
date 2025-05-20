@@ -20,6 +20,7 @@ import EditSupplier from './Pages/Supplier/EditSupplier';
 import ItemBarcode from './Pages/ItemBarcode/ItemBarcode';
 import BulkBarcodePrint from './Components/BulkBarcodePrint/BulkBarcodePrint';
 import Dashboard from './Pages/Dashboard/Dashboard';
+import Reports from './Pages/Reports/Reports';
 
 // Layout component to wrap authenticated routes
 const AdminLayout = ({ children }) => {
@@ -55,6 +56,14 @@ const AppRoutes = () => {
         <ProtectedRoute requiredRole="employee">
           <AdminLayout>
             <Dashboard url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/reports" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <Reports url={url} />
           </AdminLayout>
         </ProtectedRoute>
       } />

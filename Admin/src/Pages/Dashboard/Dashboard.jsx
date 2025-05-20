@@ -7,6 +7,7 @@ import SalesChart from './SalesChart';
 import InventoryWidget from './InventoryWidget';
 import OrdersWidget from './OrdersWidget';
 import TopProducts from './TopProducts';
+import ReportDownloader from '../../Components/ReportDownloader/ReportDownloader';
 import './Dashboard.css';
 import assets from '../../assets/assets';
 
@@ -49,6 +50,38 @@ const Dashboard = ({ url }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Prepare reports data
+  const prepareSalesReportData = () => {
+    if (!dashboardData?.salesData) return [];
+    
+    return dashboardData.salesData.map(item => ({
+      date: item.date,
+      orders: item.orders,
+      revenue: parseFloat(item.revenue).toFixed(2)
+    }));
+  };
+  
+  const prepareInventoryReportData = () => {
+    if (!dashboardData?.lowStockItems && !dashboardData?.outOfStockItems) return [];
+    
+    const lowStock = (dashboardData.lowStockItems || []).map(item => ({
+      ...item,
+      status: 'Low Stock'
+    }));
+    
+    const outOfStock = (dashboardData.outOfStockItems || []).map(item => ({
+      ...item,
+      status: 'Out of Stock'
+    }));
+    
+    return [...lowStock, ...outOfStock];
+  };
+  
+  const prepareProductsReportData = () => {
+    if (!dashboardData?.topProducts) return [];
+    return dashboardData.topProducts;
   };
 
   if (loading) {
@@ -98,7 +131,9 @@ const Dashboard = ({ url }) => {
 
       <div className="dashboard-summary">
         <div className="dashboard-summary-card revenue">
-          <div className="dashboard-summary-icon"><img src={assets.rupee_icon} alt=""/></div>
+          <div className="dashboard-summary-icon">
+            <img src={assets.rupee_icon} alt="Revenue" />
+          </div>
           <div className="dashboard-summary-content">
             <h3>Total Revenue</h3>
             <p>LKR {dashboardData?.totalRevenue?.toFixed(2) || "0.00"}</p>
@@ -109,7 +144,9 @@ const Dashboard = ({ url }) => {
         </div>
         
         <div className="dashboard-summary-card orders">
-          <div className="dashboard-summary-icon"><img src={assets.basket_icon} alt="" /></div>
+          <div className="dashboard-summary-icon">
+            <img src={assets.basket_icon} alt="Orders" />
+          </div>
           <div className="dashboard-summary-content">
             <h3>Orders</h3>
             <p>{dashboardData?.totalOrders || 0}</p>
@@ -120,7 +157,9 @@ const Dashboard = ({ url }) => {
         </div>
         
         <div className="dashboard-summary-card inventory">
-          <div className="dashboard-summary-icon"><img src={assets.out_of_stock} alt="" /></div>
+          <div className="dashboard-summary-icon">
+            <img src={assets.out_of_stock} alt="Inventory" />
+          </div>
           <div className="dashboard-summary-content">
             <h3>Inventory</h3>
             <p>{dashboardData?.lowStockItems?.length || 0} Items Low</p>
@@ -131,7 +170,9 @@ const Dashboard = ({ url }) => {
         </div>
         
         <div className="dashboard-summary-card avg-order">
-          <div className="dashboard-summary-icon"><img src={assets.avg_icon} alt="" /></div>
+          <div className="dashboard-summary-icon">
+            <img src={assets.avg_icon} alt="Average Order" />
+          </div>
           <div className="dashboard-summary-content">
             <h3>Avg. Order Value</h3>
             <p>LKR {dashboardData?.averageOrderValue?.toFixed(2) || "0.00"}</p>
@@ -143,18 +184,89 @@ const Dashboard = ({ url }) => {
         <div className="dashboard-chart-container">
           <div className="dashboard-chart-header">
             <h2>Revenue Trends</h2>
-            <Link to="/reports/sales">View Details</Link>
+            <div className="dashboard-chart-actions">
+              <ReportDownloader
+                data={prepareSalesReportData()}
+                reportName="Sales_Report"
+                pdfHeaders={[
+                  {key: 'date', label: 'Date'},
+                  {key: 'orders', label: 'Orders'},
+                  {key: 'revenue', label: 'Revenue (LKR)'}
+                ]}
+                csvHeaders={[
+                  {key: 'date', label: 'Date'},
+                  {key: 'orders', label: 'Orders'},
+                  {key: 'revenue', label: 'Revenue (LKR)'}
+                ]}
+              />
+              <Link to="/reports/sales">View Details</Link>
+            </div>
           </div>
           <SalesChart data={dashboardData?.salesData || []} />
         </div>
       </div>
 
       <div className="dashboard-widgets">
+        <div className="dashboard-widget inventory-widget">
+          <div className="dashboard-widget-header">
+            <h2>Inventory Status</h2>
+            <div className="dashboard-widget-actions">
+              <ReportDownloader
+                data={prepareInventoryReportData()}
+                reportName="Inventory_Status_Report"
+                pdfHeaders={[
+                  {key: 'name', label: 'Item Name'},
+                  {key: 'category', label: 'Category'},
+                  {key: 'stock_quantity', label: 'Stock'},
+                  {key: 'unit', label: 'Unit'},
+                  {key: 'reorder_level', label: 'Reorder Level'},
+                  {key: 'status', label: 'Status'}
+                ]}
+                csvHeaders={[
+                  {key: 'id', label: 'ID'},
+                  {key: 'name', label: 'Item Name'},
+                  {key: 'category', label: 'Category'},
+                  {key: 'stock_quantity', label: 'Stock Quantity'},
+                  {key: 'unit', label: 'Unit'},
+                  {key: 'reorder_level', label: 'Reorder Level'},
+                  {key: 'status', label: 'Status'}
+                ]}
+              />
+              <Link to="/list">View All</Link>
+            </div>
+          </div>
+          <InventoryWidget items={dashboardData?.lowStockItems || []} />
+        </div>
+        
         <OrdersWidget orders={dashboardData?.recentOrders || []} />
-        <InventoryWidget items={dashboardData?.lowStockItems || []} />
       </div>
 
-      <div className="dashboard-products">
+      <div className="dashboard-section">
+        <div className="dashboard-section-header">
+          <h2>Top Selling Products</h2>
+          <div className="dashboard-section-actions">
+            <ReportDownloader
+              data={prepareProductsReportData()}
+              reportName="Top_Products_Report"
+              pdfHeaders={[
+                {key: 'name', label: 'Product Name'},
+                {key: 'category', label: 'Category'},
+                {key: 'quantity_sold', label: 'Quantity Sold'},
+                {key: 'unit', label: 'Unit'},
+                {key: 'total_revenue', label: 'Revenue (LKR)'}
+              ]}
+              csvHeaders={[
+                {key: 'id', label: 'ID'},
+                {key: 'name', label: 'Product Name'},
+                {key: 'category', label: 'Category'},
+                {key: 'quantity_sold', label: 'Quantity Sold'},
+                {key: 'unit', label: 'Unit'},
+                {key: 'total_revenue', label: 'Revenue (LKR)'}
+              ]}
+            />
+            <Link to="/sales/products">View All</Link>
+          </div>
+        </div>
         <TopProducts products={dashboardData?.topProducts || []} />
       </div>
     </div>

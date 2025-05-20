@@ -9,6 +9,8 @@ import rupee_icon from './rupee_icon.svg';
 import basket_icon from './basket_icon.png';
 import avg_icon from './avg_icon.png';
 import out_of_stock from './out_of_stock.svg';
+import reports_icon from './reports_icon.svg';
+import grn_icon from './grn_icon.png';
 
 export const assets = {
     font,
@@ -21,7 +23,9 @@ export const assets = {
     rupee_icon,
     basket_icon,
     avg_icon,
-    out_of_stock
+    out_of_stock,
+    reports_icon,
+    grn_icon
 };
 
 export default assets;

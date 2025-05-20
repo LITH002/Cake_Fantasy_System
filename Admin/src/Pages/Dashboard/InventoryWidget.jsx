@@ -3,12 +3,7 @@ import { Link } from 'react-router-dom';
 
 const InventoryWidget = ({ items = [] }) => {
   return (
-    <div className="dashboard-widget">
-      <div className="dashboard-widget-header">
-        <h2>Low Stock Items</h2>
-        <Link to="/list">View All</Link>
-      </div>
-      
+    <div className="dashboard-widget-content">
       {items.length === 0 ? (
         <div className="dashboard-no-data">
           <p>No low stock items found</p>
@@ -21,6 +16,7 @@ const InventoryWidget = ({ items = [] }) => {
                 <th>Item</th>
                 <th>Stock</th>
                 <th>Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -37,6 +33,9 @@ const InventoryWidget = ({ items = [] }) => {
                     <span className={`dashboard-status ${item.stock_quantity === 0 ? 'dashboard-status-out' : 'dashboard-status-low'}`}>
                       {item.stock_quantity === 0 ? 'Out of Stock' : 'Low Stock'}
                     </span>
+                  </td>
+                  <td>
+                    <Link to={`/edit-item/${item.id}`} className="dashboard-action-link">Update</Link>
                   </td>
                 </tr>
               ))}

@@ -497,6 +497,39 @@
   margin-top: 10px;
 }
 
+/* Add these styles to your existing Dashboard.css file */
+
+.dashboard-chart-header, 
+.dashboard-widget-header,
+.dashboard-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-chart-actions,
+.dashboard-widget-actions,
+.dashboard-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-chart-actions a,
+.dashboard-widget-actions a,
+.dashboard-section-actions a {
+  color: #591b0d;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.dashboard-chart-actions a:hover,
+.dashboard-widget-actions a:hover,
+.dashboard-section-actions a:hover {
+  text-decoration: underline;
+}
+
 @keyframes dashboard-fadeIn {
   from {
     opacity: 0;

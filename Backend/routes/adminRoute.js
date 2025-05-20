@@ -1,5 +1,5 @@
 import express from "express";
-import { adminLogin, createEmployee, getAllEmployees, updateEmployee,deleteEmployee, getDashboardData } from "../controllers/adminController.js";
+import { adminLogin, createEmployee, getAllEmployees, updateEmployee,deleteEmployee, getDashboardData, getReports } from "../controllers/adminController.js";
 import authMiddleware from "../middleware/auth.js";
 import adminMiddleware from "../middleware/admin.js";
 import { Admin } from "../models/adminModel.js";
@@ -46,5 +46,6 @@ router.get("/employees", authMiddleware, adminMiddleware("owner"), getAllEmploye
 router.put("/employees/:id", authMiddleware, adminMiddleware("owner"), updateEmployee);
 router.delete("/employees/:id", authMiddleware, adminMiddleware("owner"), deleteEmployee);
 router.get("/dashboard", authMiddleware, adminMiddleware(), getDashboardData);
+router.get("/reports/:type", authMiddleware, adminMiddleware(), getReports);
 
 export default router;
