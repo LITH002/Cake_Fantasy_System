@@ -1,7 +1,8 @@
 import express from "express";
-import { adminLogin, createEmployee, getAllEmployees, updateEmployee,deleteEmployee } from "../controllers/adminController.js";
+import { adminLogin, createEmployee, getAllEmployees, updateEmployee,deleteEmployee, getDashboardData } from "../controllers/adminController.js";
 import authMiddleware from "../middleware/auth.js";
 import adminMiddleware from "../middleware/admin.js";
+import { Admin } from "../models/adminModel.js";
 
 const router = express.Router();
 
@@ -44,5 +45,6 @@ router.post("/employees", authMiddleware, adminMiddleware("owner"), createEmploy
 router.get("/employees", authMiddleware, adminMiddleware("owner"), getAllEmployees);
 router.put("/employees/:id", authMiddleware, adminMiddleware("owner"), updateEmployee);
 router.delete("/employees/:id", authMiddleware, adminMiddleware("owner"), deleteEmployee);
+router.get("/dashboard", authMiddleware, adminMiddleware(), getDashboardData);
 
 export default router;

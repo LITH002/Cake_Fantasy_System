@@ -36,7 +36,7 @@
 }
 
 .bulk-barcode-btn {
-    background-color: #28a745;
+    background-color: #8C7B6B;
     color: white;
 }
 
@@ -45,7 +45,7 @@
 }
 
 .bulk-barcode-btn:hover {
-    background-color: #218838;
+    background-color: #7A6B5C;
 }
 
 .list-search {
@@ -150,17 +150,17 @@
 }
 
 .edit-btn {
-    background-color: #3498db;
+    background-color: #5a7684;
     color: white;
 }
 
 .barcode-btn {
-    background-color: #28a745;
+    background-color: #8c7b6b;
     color: white;
 }
 
 .delete-btn {
-    background-color: #e74c3c;
+    background-color: #c4453c;
     color: white;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .barcode-btn:hover {
-    background-color: #218838;
+    background-color: #7A6B5C;
 }
 
 .delete-btn:hover {
