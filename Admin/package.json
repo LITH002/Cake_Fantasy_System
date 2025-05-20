@@ -11,8 +11,13 @@
   },
   "dependencies": {
     "axios": "^1.8.4",
+    "chart.js": "^4.4.9",
     "jsbarcode": "^3.11.6",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-csv": "^2.2.2",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.4.0",
     "react-toastify": "^11.0.5"
