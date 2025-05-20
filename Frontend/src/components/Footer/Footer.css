@@ -47,13 +47,57 @@
     border: none;
 }
 
-@media (max-width:750px) {
-    .footer-content{
-        display: flex;
-        flex-direction: column;
-        gap: 35px;
-    }
-    .footer-copyright{
-        text-align: center;
-    }
+/* Add to your existing Footer CSS */
+
+.footer-content-center li, 
+.footer-content-right li {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.footer-content-center li:hover, 
+.footer-content-right li:hover,
+.footer-content-right a:hover {
+  color: #f5e1d6;
+}
+
+.footer-social-icons a {
+  display: inline-block;
+  transition: transform 0.2s;
+}
+
+.footer-social-icons a:hover {
+  transform: translateY(-3px);
+}
+
+.footer-bottom {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.back-to-top {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.back-to-top:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 750px) {
+  .footer-bottom {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .back-to-top {
+    margin-bottom: 10px;
+  }
 }

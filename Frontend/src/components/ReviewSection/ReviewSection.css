@@ -1,0 +1,179 @@
+.review-section {
+  margin: 40px 0;
+  padding-top: 30px;
+  border-top: 1px solid #eee;
+}
+
+.review-section h2 {
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.review-summary {
+  display: flex;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.average-rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rating-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #591b0d;
+}
+
+.review-count {
+  color: #666;
+  font-size: 14px;
+}
+
+.review-form-container {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+}
+
+.review-form-container h3 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #444;
+}
+
+.login-prompt {
+  color: #666;
+}
+
+.login-prompt a {
+  color: #591b0d;
+  text-decoration: underline;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 14px;
+  color: #555;
+}
+
+.form-group textarea {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.submit-review-btn {
+  background-color: #591b0d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  align-self: flex-start;
+}
+
+.submit-review-btn:hover {
+  background-color: #7a2917;
+}
+
+.submit-review-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.reviews-list h3 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #444;
+}
+
+.reviews-loading, .no-reviews {
+  color: #666;
+  font-style: italic;
+}
+
+.review-item {
+  border-bottom: 1px solid #eee;
+  padding: 15px 0;
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.reviewer-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.review-date {
+  color: #888;
+  font-size: 12px;
+}
+
+.review-rating {
+  margin-bottom: 10px;
+}
+
+.review-comment {
+  color: #555;
+  line-height: 1.5;
+}
+
+/* Add these styles to your existing ReviewSection.css */
+
+.review-error {
+  background-color: #fff8f8;
+  border: 1px solid #ffcccc;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.review-error p {
+  color: #e53935;
+  margin-bottom: 10px;
+}
+
+.reload-btn {
+  background-color: #591b0d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reload-btn:hover {
+  background-color: #7a2917;
+}

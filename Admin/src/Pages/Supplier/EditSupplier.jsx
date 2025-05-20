@@ -65,6 +65,36 @@ const EditSupplier = ({ url }) => {
     });
   };
 
+  const formatPhoneForComparison = (phone) => {
+    let digits = phone.replace(/\D/g, '');
+    // Convert local numbers (07) to international format (947)
+    if (digits.startsWith('0')) {
+      digits = '94' + digits.substring(1);
+    }
+    return digits;
+  };
+
+  const isValidSriLankanPhone = (phone) => {
+    const digitsOnly = phone.replace(/\D/g, '');
+    
+    // Check for mobile numbers (07, +947, 947)
+    if (/^(?:0|94|\+94)?7[0-9]{8}$/.test(digitsOnly)) {
+      return true;
+    }
+    
+    // Check for landlines (0xx...) with area codes
+    if (/^0[1-9][0-9]{8}$/.test(digitsOnly)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
   const validateForm = () => {
     if (!formData.name.trim()) {
       toast.error("Supplier name is required");
@@ -73,6 +103,18 @@ const EditSupplier = ({ url }) => {
     
     if (!formData.phone.trim()) {
       toast.error("Phone number is required");
+      return false;
+    }
+    
+    if (!isValidSriLankanPhone(formData.phone)) {
+      toast.error("Please enter a valid Sri Lankan phone number\n" +
+        "Mobile: 07XXXXXXXX or +947XXXXXXXX\n" +
+        "Landline: 0XXYYYYYYY");
+      return false;
+    }
+    
+    if (formData.email && !isValidEmail(formData.email)) {
+      toast.error("Please enter a valid email address");
       return false;
     }
     
@@ -162,6 +204,7 @@ const EditSupplier = ({ url }) => {
                 value={formData.contact_person}
                 onChange={handleInputChange}
               />
+              <small className="form-hint">Optional</small>
             </div>
           </div>
 
@@ -174,8 +217,10 @@ const EditSupplier = ({ url }) => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
+                placeholder="e.g., 0712345678 or +94 712345678"
                 required
               />
+              <small className="form-hint">Mobile: 07XXXXXXXX or +947XXXXXXXX | Landline: 0XXYYYYYYY</small>
             </div>
             
             <div className="form-group">
@@ -187,6 +232,7 @@ const EditSupplier = ({ url }) => {
                 value={formData.email}
                 onChange={handleInputChange}
               />
+              <small className="form-hint">Optional</small>
             </div>
           </div>
 
@@ -199,6 +245,7 @@ const EditSupplier = ({ url }) => {
               onChange={handleInputChange}
               rows="2"
             />
+            <small className="form-hint">Optional</small>
           </div>
 
           <div className="form-group">
@@ -210,6 +257,7 @@ const EditSupplier = ({ url }) => {
               onChange={handleInputChange}
               rows="3"
             />
+            <small className="form-hint">Optional</small>
           </div>
 
           <div className="form-actions">

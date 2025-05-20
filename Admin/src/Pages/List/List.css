@@ -1,19 +1,137 @@
+.list-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.list-header h2 {
+    color: #591b0d;
+    margin: 0;
+}
+
+.list-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.add-new-btn, .bulk-barcode-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-new-btn {
+    background-color: #591b0d;
+    color: white;
+}
+
+.bulk-barcode-btn {
+    background-color: #8C7B6B;
+    color: white;
+}
+
+.add-new-btn:hover {
+    background-color: #7a2917;
+}
+
+.bulk-barcode-btn:hover {
+    background-color: #7A6B5C;
+}
+
+.list-search {
+    margin-bottom: 20px;
+}
+
+.list-search input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.list-table {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
 .list-table-format {
     display: grid;
-    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr;
+    grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1fr 1.5fr;
     align-items: center;
     gap: 10px;
     padding: 12px 15px;
-    border: 1px solid #cacaca;
+    border-bottom: 1px solid #cacaca;
     font-size: 13px;
+}
+
+.list-table-format:last-child {
+    border-bottom: none;
 }
 
 .list-table-format.title {
     background-color: #f9f9f9;
+    font-weight: bold;
 }
 
 .list-table-format img {
     width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.item-name {
+    font-weight: 500;
+}
+
+.item-weight {
+    font-size: 12px;
+    color: #666;
+    margin-left: 5px;
+}
+
+.item-category {
+    color: #666;
+}
+
+.item-sku {
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.item-price {
+    font-weight: 500;
+}
+
+.item-stock {
+    color: #444;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.low-stock {
+    color: #e74c3c;
+}
+
+.reorder-indicator {
+    background-color: #e74c3c;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 20px;
 }
 
 .action-buttons {
@@ -21,7 +139,7 @@
     gap: 8px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn, .delete-btn, .barcode-btn {
     padding: 6px 12px;
     border: none;
     border-radius: 4px;
@@ -32,12 +150,17 @@
 }
 
 .edit-btn {
-    background-color: #3498db;
+    background-color: #5a7684;
+    color: white;
+}
+
+.barcode-btn {
+    background-color: #8c7b6b;
     color: white;
 }
 
 .delete-btn {
-    background-color: #e74c3c;
+    background-color: #c4453c;
     color: white;
 }
 
@@ -45,17 +168,83 @@
     background-color: #2980b9;
 }
 
+.barcode-btn:hover {
+    background-color: #7A6B5C;
+}
+
 .delete-btn:hover {
     background-color: #c0392b;
 }
 
-@media (max-width:600px) { /*Make components responsive to the window size*/
+.no-items {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #591b0d;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 992px) {
     .list-table-format {
-        grid-template-columns: 1fr 3fr 1fr;
-        gap: 15px
+        grid-template-columns: 0.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr;
     }
+}
+
+@media (max-width: 768px) {
+    .list-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .list-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+    
+    .add-new-btn, .bulk-barcode-btn {
+        width: 100%;
+    }
+    
+    .list-table-format {
+        grid-template-columns: 0.5fr 2fr 1fr;
+    }
+    
     .list-table-format.title {
         display: none;
+    }
+    
+    .action-buttons {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .list-table-format {
+        grid-template-columns: 1fr 3fr;
+        gap: 15px;
     }
     
     .action-buttons {

@@ -18,9 +18,7 @@ const placeOrder = async (req, res) => {
       contactNumber1,
       contactNumber2 = "", 
       specialInstructions = "" 
-    } = req.body;
-
-    // Validate required fields
+    } = req.body;    // Validate required fields
     if (!firstName || !lastName || !contactNumber1 || !address) {
       return res.status(400).json({
         success: false,
@@ -34,6 +32,26 @@ const placeOrder = async (req, res) => {
         success: false,
         message: "No items in order"
       });
+    }
+      
+    // Validate amount is provided and is a number
+    if (amount === undefined || amount === null || isNaN(parseFloat(amount))) {
+      // Calculate the amount from items if not provided or invalid
+      const calculatedAmount = items.reduce((total, item) => {
+        const itemPrice = parseFloat(item.price || 0);
+        const quantity = parseFloat(item.quantity || 0);
+        return total + (itemPrice * quantity);
+      }, 0) + 150; // Add delivery fee
+      
+      if (calculatedAmount <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Order amount is required and must be a valid number"
+        });
+      }
+      
+      console.log(`Calculated amount: ${calculatedAmount} (original was invalid: ${amount})`);
+      amount = calculatedAmount;
     }
 
     console.log("Creating order with data:", {
@@ -60,19 +78,34 @@ const placeOrder = async (req, res) => {
     
     // 2. Clear user's cart using Order model
     await Order.clearCart(userId || req.user.id);
-    
-    // 3. Create Stripe session
-    const line_items = items.map(item => ({
-      price_data: {
-        currency: "lkr",
-        product_data: { 
-          name: item.name,
-          metadata: { item_id: item.id } 
+      // 3. Create Stripe session
+    const line_items = items.map(item => {
+      // Ensure price is valid
+      const price = parseFloat(item.price);
+      if (isNaN(price) || price <= 0) {
+        console.error(`Invalid price for item ${item.id}: ${item.price}`);
+        return null;
+      }
+      
+      // Ensure quantity is valid
+      const quantity = parseInt(item.quantity);
+      if (isNaN(quantity) || quantity <= 0) {
+        console.error(`Invalid quantity for item ${item.id}: ${item.quantity}`);
+        return null;
+      }
+      
+      return {
+        price_data: {
+          currency: "lkr",
+          product_data: { 
+            name: item.name || `Product ID: ${item.id}`,
+            metadata: { item_id: item.id } 
+          },
+          unit_amount: Math.round(price * 100) // Convert to cents (LKR)
         },
-        unit_amount: Math.round(item.price * 100) // Convert to cents (LKR)
-      },
-      quantity: item.quantity
-    }));
+        quantity: quantity
+      };
+    }).filter(item => item !== null); // Remove invalid items
     
     // Add delivery fee
     line_items.push({
@@ -86,21 +119,34 @@ const placeOrder = async (req, res) => {
     
     console.log("Creating Stripe session with line items:", line_items.length);
     
-    const session = await stripe.checkout.sessions.create({
-      line_items,
-      mode: "payment",
-      success_url: `${frontend_url}/verify?success=true&orderId=${orderId}`,
-      cancel_url: `${frontend_url}/verify?success=false&orderId=${orderId}`,
-      metadata: { order_id: orderId }
-    });
-    
-    console.log(`Stripe session created: ${session.id}`);
-    
-    res.json({ 
-      success: true, 
-      url: session.url,
-      orderId
-    });
+    try {      const session = await stripe.checkout.sessions.create({
+        line_items,
+        mode: "payment",
+        success_url: `${frontend_url}/verify?success=true&orderId=${orderId}`,
+        cancel_url: `${frontend_url}/verify?success=false&orderId=${orderId}`,
+        metadata: { order_id: orderId }
+      });
+      
+      console.log(`Stripe session created: ${session.id}`);
+      
+      res.json({ 
+        success: true, 
+        url: session.url,
+        orderId
+      });
+    } catch (stripeError) {
+      console.error("Stripe session creation error:", stripeError);
+      
+      // Order was created but payment failed - update the order status
+      await Order.updatePaymentStatus(orderId, false);
+      
+      res.status(500).json({
+        success: false,
+        message: "Error creating payment session",
+        error: process.env.NODE_ENV === 'development' ? stripeError.message : undefined,
+        orderId // Return the order ID even if payment fails
+      });
+    }
     
   } catch (error) {
     console.error("Order error:", error);

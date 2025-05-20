@@ -22,11 +22,12 @@
 }
 
 .status {
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: 50px;
   display: inline-block;
   font-size: 12px;
   text-align: center;
+  font-weight: 500;
 }
 
 .status-processing {
@@ -50,10 +51,11 @@
 }
 
 .payment {
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: 50px;
   display: inline-block;
   font-size: 12px;
+  font-weight: 500;
 }
 
 .payment.paid {
@@ -72,11 +74,12 @@
 
 .order-details {
   display: flex;
-  padding: 15px;
+  padding: 20px;
   background-color: #f9f9f9;
   border: 1px solid #ddd;
   border-top: none;
-  gap: 20px;
+  gap: 25px;
+  border-radius: 0 0 4px 4px;
 }
 
 .details-section {
@@ -86,13 +89,25 @@
 .details-section h3 {
   font-size: 16px;
   color: #591b0d;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-weight: 500;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e9e9e9;
 }
 
 .details-section p {
-  margin: 5px 0;
+  margin: 8px 0;
   font-size: 14px;
+  line-height: 1.4;
+}
+
+.status-update {
+  margin-bottom: 18px;
+}
+
+.status-update p,
+.payment-update p {
+  margin-bottom: 8px;
 }
 
 .status-update select {
@@ -102,13 +117,81 @@
   font-family: 'Outfit';
   background-color: white;
   color: #6d6d6d;
-  margin-top: 5px;
   width: 100%;
   max-width: 200px;
 }
 
+.payment-update {
+  margin-bottom: 18px;
+}
+
+.payment-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.payment-btn {
+  padding: 8px 12px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.payment-btn:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.payment-btn.active {
+  background-color: #591b0d;
+  color: white;
+  border-color: #591b0d;
+}
+
+.payment-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.expanded-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.details-btn, .bill-gen-btn {
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.details-btn {
+  background-color: #854D27;
+  color: white;
+  border: none;
+}
+
+.details-btn:hover {
+  background-color: #9a5a2f;
+}
+
+.bill-gen-btn {
+  background-color: #591b0d;
+  color: white;
+  border: none;
+}
+
+.bill-gen-btn:hover {
+  background-color: #752c17;
+}
+
 .action-buttons {
   display: flex;
+  align-items: center;
   gap: 8px;
 }
 
@@ -120,13 +203,66 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
+  transition: background-color 0.2s;
 }
 
 .view-btn:hover {
   background-color: #752c17;
 }
 
-.no-orders, .loading-container {
+.bill-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border: 1px solid #ddd;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bill-btn:hover {
+  background-color: #f5f5f5;
+  border-color: #591b0d;
+}
+
+.bill-btn svg path {
+  transition: stroke 0.2s;
+}
+
+.bill-btn:hover svg path {
+  stroke: #752c17;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #591b0d;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.no-orders {
   padding: 40px;
   text-align: center;
   background-color: #f9f9f9;
@@ -139,16 +275,18 @@
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 25px;
+  margin-bottom: 15px;
 }
 
 .pagination-btn {
   background-color: #fff;
   border: 1px solid #ddd;
-  padding: 6px 12px;
+  padding: 7px 12px;
   border-radius: 4px;
   cursor: pointer;
   font-family: 'Outfit';
+  transition: all 0.2s;
 }
 
 .pagination-btn:disabled {
@@ -172,5 +310,33 @@
 
   .order-details {
     flex-direction: column;
+  }
+  
+  .payment-buttons {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .expanded-actions {
+    flex-direction: column;
+  }
+  
+  .details-btn, 
+  .bill-gen-btn {
+    width: 100%;
+  }
+  
+  .payment-buttons {
+    flex-direction: column;
+  }
+  
+  .payment-btn {
+    width: 100%;
+  }
+  
+  .status-update select {
+    max-width: none;
+    width: 100%;
   }
 }

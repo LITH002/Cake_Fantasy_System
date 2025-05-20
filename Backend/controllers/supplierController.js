@@ -119,13 +119,20 @@ export const createSupplier = async (req, res) => {
   }
 };
 
-// Update supplier
+// Update updateSupplier function
 export const updateSupplier = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { supplier_id } = req.body; // Get ID from request body instead of params
     const { name, contact_person, email, phone, address, notes, is_active } = req.body;
     
     // Validate required fields
+    if (!supplier_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Supplier ID is required"
+      });
+    }
+    
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -140,7 +147,17 @@ export const updateSupplier = async (req, res) => {
       });
     }
     
-    const success = await Supplier.update(id, {
+    // First check if the supplier exists
+    const existingSupplier = await Supplier.findById(supplier_id);
+    if (!existingSupplier) {
+      return res.status(404).json({
+        success: false,
+        message: "Supplier not found"
+      });
+    }
+    
+    // Update the supplier
+    await Supplier.update(supplier_id, {
       name,
       contact_person,
       email,
@@ -150,13 +167,7 @@ export const updateSupplier = async (req, res) => {
       is_active: is_active !== undefined ? is_active : true
     });
     
-    if (!success) {
-      return res.status(404).json({
-        success: false,
-        message: "Supplier not found or no changes made"
-      });
-    }
-    
+    // Return success regardless of whether data was changed
     res.json({
       success: true,
       message: "Supplier updated successfully"

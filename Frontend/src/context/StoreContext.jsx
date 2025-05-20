@@ -1,6 +1,7 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useEffect, useState, useCallback } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export const StoreContext = createContext(null);
 
@@ -11,46 +12,48 @@ const StoreContextProvider = (props) => {
   const [item_list, setItemList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const addToCart = async (id) => {
-    if (!id) return;
-
+  const addToCart = async (id, quantity = 1) => {
+    if (!id) {
+      console.error("Invalid item ID");
+      return;
+    }
+    
+    if (!token) {
+      toast.error("Please login to add items to cart");
+      return;
+    }
+    
+    setLoading(true);
+    
     try {
-      const newQuantity = (cartItems[id] || 0) + 1;
-      setCartItems(prev => ({ ...prev, [id]: newQuantity }));
-
-      if (token) {
-        setLoading(true);
-        const response = await axios.post(
-          `${url}/api/cart/add`,
-          { 
-            item_id: id,
-            quantity: 1 
-          },
-          { 
-            headers: { 
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            } 
-          }
-        );
-        
-        if (!response.data.success) {
-          throw new Error(response.data.message);
-        }
-      }
-    } catch (err) {
-      console.error("Cart error:", {
-        error: err,
-        response: err.response?.data
-      });
+      // For direct cart updates from product detail, use the exact quantity
+      const newQuantity = quantity;
       
+      // Update local state for immediate UI feedback
       setCartItems(prev => ({
         ...prev,
-        [id]: Math.max(0, (prev[id] || 0) - 1)
+        [id]: newQuantity
       }));
       
-      setError(err.response?.data?.message || "Failed to add item");
+      console.log(`Updated local cart: Item ${id} quantity set to ${newQuantity}`);
+      
+      // The API call is now handled by the component itself
+      return true;
+    } catch (err) {
+      console.error("Cart error:", err);
+      
+      // Revert the local state change on error
+      setCartItems(prev => {
+        const previousQty = prev[id] || 0;
+        return {
+          ...prev,
+          [id]: previousQty
+        };
+      });
+      
+      setError("Failed to update cart");
+      toast.error("Failed to update cart");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -135,7 +138,6 @@ const StoreContextProvider = (props) => {
     setLoading(false);
   }
 };
-
   const getTotalCartAmount = () => {
     // Check if item_list is loaded and not empty
     if (!item_list || item_list.length === 0) {
@@ -144,35 +146,49 @@ const StoreContextProvider = (props) => {
     }
 
     let totalAmount = 0;
-    for (const item in cartItems) {
-      if (cartItems[item] > 0) {
+    for (const itemId in cartItems) {
+      if (cartItems[itemId] > 0) {
         // Try multiple ID formats (string and number comparison)
         let itemInfo = item_list.find(
           (product) =>
-            String(product._id) === String(item) ||
-            product.id === item ||
-            String(product.id) === String(item)
+            String(product._id) === String(itemId) ||
+            product.id === itemId ||
+            String(product.id) === String(itemId)
         );
 
         if (itemInfo) {
-          totalAmount += itemInfo.price * cartItems[item];
+          // Ensure valid price and quantity for calculation
+          const itemPrice = parseFloat(itemInfo.price || itemInfo.selling_price || 0);
+          const quantity = parseFloat(cartItems[itemId]);
+          
+          if (!isNaN(itemPrice) && !isNaN(quantity) && itemPrice > 0 && quantity > 0) {
+            const itemTotal = itemPrice * quantity;
+            totalAmount += itemTotal;
+            console.log(`Item ${itemId}: ${quantity} x ${itemPrice} = ${itemTotal}`);
+          } else {
+            console.warn(
+              `Invalid price (${itemPrice}) or quantity (${quantity}) for item ${itemId}`
+            );
+          }
         } else {
           console.warn(
-            `Item ${item} not found in item_list. Available IDs:`,
+            `Item ${itemId} not found in item_list. Available IDs:`,
             item_list.map((i) => `_id:${i._id}, id:${i.id}`).slice(0, 3)
           );
 
+          // Remove invalid item from cart
           setCartItems((prev) => {
             const newCart = { ...prev };
-            delete newCart[item];
+            delete newCart[itemId];
             return newCart;
           });
         }
       }
     }
+    
+    console.log(`Total cart amount: ${totalAmount}`);
     return totalAmount;
   };
-
   const fetchItemList = async () => {
     try {
       const response = await axios.get(url + "/api/item/list");
@@ -182,8 +198,17 @@ const StoreContextProvider = (props) => {
       setError(err.response?.data?.message || "Failed to fetch items");
     }
   };
-
-  const fetchUserCart = async () => {
+  
+  // Define logout function first to avoid reference error
+  const logout = useCallback(() => {
+    localStorage.removeItem("token");
+    delete axios.defaults.headers.common['Authorization'];
+    setToken("");
+    setCartItems({});
+  }, []);
+  
+  // Then define fetchUserCart which uses logout
+  const fetchUserCart = useCallback(async () => {
     if (!token) return;
     
     try {
@@ -229,14 +254,7 @@ const StoreContextProvider = (props) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    delete axios.defaults.headers.common['Authorization'];
-    setToken("");
-    setCartItems({});
-  };
+  }, [token, url, logout]);
 
   const getUserId = () => {
     if (!token) return null;
@@ -263,14 +281,13 @@ const StoreContextProvider = (props) => {
     }
     loadData();
   }, []);
-
   // Fetch cart when token changes
   useEffect(() => {
     if (token) {
       console.log("Token available - fetching cart data");
       fetchUserCart();
     }
-  }, [token]);
+  }, [token, fetchUserCart]);
 
   const contextValue = {
     item_list,

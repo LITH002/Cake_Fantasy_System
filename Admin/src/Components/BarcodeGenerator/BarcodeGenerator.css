@@ -1,0 +1,81 @@
+.barcode-generator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: white;
+  margin: 10px 0;
+  max-width: 300px;
+}
+
+.barcode-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.barcode-name {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  text-align: center;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barcode-sku {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.barcode-canvas {
+  width: 100%;
+  max-width: 250px;
+  margin: 10px 0;
+}
+
+.barcode-price {
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.barcode-weight {
+  font-size: 12px;
+  color: #444;
+  margin-top: 2px;
+}
+
+.barcode-loose {
+  font-size: 12px;
+  color: #555;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+.print-barcode-btn {
+  margin-top: 15px;
+  padding: 8px 15px;
+  background-color: #591b0d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.print-barcode-btn:hover {
+  background-color: #7a2917;
+}
+
+@media (max-width: 768px) {
+  .barcode-generator {
+    max-width: 250px;
+  }
+}

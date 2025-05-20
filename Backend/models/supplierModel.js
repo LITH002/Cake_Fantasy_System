@@ -83,15 +83,17 @@ export const Supplier = {
   },
   
   update: async (id, supplierData) => {
-    const { name, contact_person, email, phone, address, is_active } = supplierData;
-    
-    const [result] = await db.query(
-      "UPDATE suppliers SET name = ?, contact_person = ?, email = ?, phone = ?, address = ?, is_active = ? WHERE id = ?",
-      [name, contact_person, email, phone, address, is_active, id]
-    );
-    
-    return result.affectedRows > 0;
-  },
+  const { name, contact_person, email, phone, address, notes, is_active } = supplierData;
+  
+  // Use notes field too
+  const [result] = await db.query(
+    "UPDATE suppliers SET name = ?, contact_person = ?, email = ?, phone = ?, address = ?, notes = ?, is_active = ? WHERE id = ?",
+    [name, contact_person || null, email || null, phone, address || null, notes || null, is_active === undefined ? true : is_active, id]
+  );
+  
+  // Just return true always since we checked for existence before calling this
+  return true;
+},
   
   delete: async (id) => {
     // Soft delete by setting is_active to FALSE

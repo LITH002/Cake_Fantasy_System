@@ -31,6 +31,17 @@ const createOrderTables = async () => {
       UNIQUE KEY (order_id, item_id)
     ) ENGINE=InnoDB`
   ];
+  
+  // Execute the table creation queries
+  try {
+    for (const table of tables) {
+      await db.query(table);
+    }
+    console.log("Order tables initialized");
+  } catch (error) {
+    console.error("Error creating order tables:", error);
+    throw error;
+  }
 };
 
 // Order operations
@@ -69,9 +80,7 @@ const Order = {
       throw error;
     } finally {
       connection.release();
-    }
-  },
-
+    }  },
   // Add item to cart/order
   addItem: async (userId, itemId, quantity = 1) => {
     const connection = await db.getConnection();
@@ -80,22 +89,28 @@ const Order = {
       
       const orderId = await Order.getCartOrder(userId);
       
+      // Get the current price from the items table
+      const [itemResult] = await connection.query(
+        "SELECT selling_price FROM items WHERE id = ?",
+        [itemId]
+      );
+      
+      if (!itemResult.length) {
+        throw new Error("Item not found");
+      }
+      
+      const price = itemResult[0].selling_price;
+      
       await connection.query(`
         INSERT INTO order_items (
           order_id, 
           item_id, 
           quantity, 
           price
-        ) SELECT 
-          ?, 
-          ?, 
-          ?, 
-          price 
-        FROM items 
-        WHERE id = ?
+        ) VALUES (?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE 
         quantity = quantity + VALUES(quantity)
-      `, [orderId, itemId, quantity, itemId]);
+      `, [orderId, itemId, quantity, price]);
       
       await connection.commit();
       return true;
@@ -154,9 +169,9 @@ const Order = {
           i.id,
           i.name,
           i.image,
-          i.price,
+          i.selling_price as price,
           oi.quantity,
-          (i.price * oi.quantity) as total_price
+          (i.selling_price * oi.quantity) as total_price
         FROM order_items oi
         JOIN items i ON oi.item_id = i.id
         WHERE oi.order_id = ?
@@ -189,13 +204,35 @@ const Order = {
     } catch (error) {
       throw error;
     }
-  },
-
-  // Create a new order
+  },  // Create a new order
   create: async (userId, items, amount, address, firstName, lastName, contactNumber1, contactNumber2, specialInstructions) => {
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
+      
+      // Ensure amount is a valid number
+      const validAmount = parseFloat(amount);
+      if (isNaN(validAmount) || validAmount <= 0) {
+        // Calculate the total from items if amount is invalid
+        let calculatedAmount = 0;
+        for (const item of items) {
+          if (item.price && item.quantity) {
+            calculatedAmount += parseFloat(item.price) * parseFloat(item.quantity);
+          }
+        }
+        
+        // Add delivery fee (150 LKR)
+        calculatedAmount += 150;
+        
+        if (calculatedAmount <= 0) {
+          throw new Error("Invalid order amount and couldn't calculate from items");
+        }
+        
+        console.log(`Calculated order amount: ${calculatedAmount} (original was invalid: ${amount})`);
+        amount = calculatedAmount;
+      } else {
+        amount = validAmount;
+      }
       
       console.log(`Creating order for user ${userId} with ${items.length} items, total: ${amount}`);
       
@@ -218,11 +255,28 @@ const Order = {
       
       const orderId = orderResult.insertId;
       console.log(`Created order #${orderId}, now adding items`);
-      
-      // Add order items - catching errors for individual items
+        // Add order items - catching errors for individual items
       for (const item of items) {
         try {
-          console.log(`Adding item #${item.id} x${item.quantity} to order #${orderId}`);
+          // Ensure item has a valid price
+          let itemPrice = parseFloat(item.price);
+          if (isNaN(itemPrice) || itemPrice <= 0) {
+            // Fetch the price from the database if it's not valid in the request
+            const [priceResult] = await connection.query(
+              "SELECT selling_price FROM items WHERE id = ?",
+              [item.id]
+            );
+            
+            if (priceResult.length > 0) {
+              itemPrice = parseFloat(priceResult[0].selling_price);
+              console.log(`Retrieved price ${itemPrice} for item #${item.id} from database`);
+            } else {
+              console.error(`No price found for item #${item.id}`);
+              continue; // Skip this item
+            }
+          }
+          
+          console.log(`Adding item #${item.id} x${item.quantity} at price ${itemPrice} to order #${orderId}`);
           await connection.query(
             `INSERT INTO order_items (order_id, item_id, quantity, price) 
              VALUES (?, ?, ?, ?)`,
@@ -230,7 +284,7 @@ const Order = {
               orderId,
               item.id,
               item.quantity,
-              item.price
+              itemPrice
             ]
           );
         } catch (itemError) {

@@ -17,6 +17,12 @@ import GRNDetails from './Pages/GRN/GRNDetails';
 import SupplierList from './Pages/Supplier/SupplierList';
 import AddSupplier from './Pages/Supplier/AddSupplier';
 import EditSupplier from './Pages/Supplier/EditSupplier';
+import ItemBarcode from './Pages/ItemBarcode/ItemBarcode';
+import BulkBarcodePrint from './Components/BulkBarcodePrint/BulkBarcodePrint';
+import Dashboard from './Pages/Dashboard/Dashboard';
+import Reports from './Pages/Reports/Reports';
+import OrderDetails from './Components/OrderDetails/OrderDetails';
+import EmployeeManagement from './Pages/UserManagement/EmployeeManagement';
 
 // Layout component to wrap authenticated routes
 const AdminLayout = ({ children }) => {
@@ -45,7 +51,23 @@ const AppRoutes = () => {
       
       {/* Default route */}
       <Route path="/" element={
-        isAuthenticated ? <Navigate to="/list" replace /> : <Navigate to="/login" replace />
+        isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+      } />
+
+      <Route path="/dashboard" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <Dashboard url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/reports" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <Reports url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
       } />
       
       {/* Protected routes */}
@@ -58,12 +80,30 @@ const AppRoutes = () => {
       } />
       
       <Route path="/add" element={
-        <ProtectedRoute requiredRole="employee">
+        <ProtectedRoute requiredRole="admin">
           <AdminLayout>
             <Add url={url} />
           </AdminLayout>
         </ProtectedRoute>
       } />
+
+      <Route 
+        path="/item-barcode/:itemId" 
+        element={
+          <ProtectedRoute>
+            <ItemBarcode url={url} />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/bulk-barcode" 
+        element={
+          <ProtectedRoute>
+            <BulkBarcodePrint url={url} />
+          </ProtectedRoute>
+        } 
+      />
       
       <Route path="/orders" element={
         <ProtectedRoute requiredRole="employee">
@@ -72,11 +112,21 @@ const AppRoutes = () => {
           </AdminLayout>
         </ProtectedRoute>
       } />
+
+      <Route path="/orders/:id" element={
+        <ProtectedRoute requiredRole="employee">
+          <AdminLayout>
+            <OrderDetails url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
       
       <Route path="/edit-item/:itemId" element={
-        <AdminLayout>
-          <EditItem url={url} />
-        </AdminLayout>
+        <ProtectedRoute requiredRole="admin">
+          <AdminLayout>
+            <EditItem url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
       } />
 
       <Route path="/suppliers" element={
@@ -123,6 +173,14 @@ const AppRoutes = () => {
         <ProtectedRoute requiredRole="employee">
           <AdminLayout>
             <GRNDetails url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/employee-management" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminLayout>
+            <EmployeeManagement url={url} />
           </AdminLayout>
         </ProtectedRoute>
       } />

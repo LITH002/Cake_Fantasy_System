@@ -1,9 +1,14 @@
 import { GRN } from "../models/grnModel.js";
+import db from '../config/db.js';
 
 // Create new GRN
 export const createGRN = async (req, res) => {
+  const connection = await db.getConnection();
+  
   try {
     const { supplier_id, po_reference, received_date, notes, items } = req.body;
+    
+    console.log("Creating GRN with request:", req.body);
     
     // Validate required fields
     if (!supplier_id || !received_date || !items || !items.length) {
@@ -13,7 +18,7 @@ export const createGRN = async (req, res) => {
       });
     }
     
-    // Validate items format
+    // Validate items format with unit-specific validation
     for (const item of items) {
       if (!item.item_id || !item.received_quantity || !item.unit_price) {
         return res.status(400).json({
@@ -21,15 +26,63 @@ export const createGRN = async (req, res) => {
           message: "Each item must have item_id, received_quantity, and unit_price"
         });
       }
+
+      try {
+        // Get item details including unit information
+        const [itemDetails] = await connection.query(
+          `SELECT is_loose, min_order_quantity, increment_step, unit, category 
+           FROM items WHERE id = ?`,
+          [item.item_id]
+        );
+        
+        if (itemDetails.length > 0) {
+          const unit = itemDetails[0].unit || 'piece';
+          const receivedQty = parseFloat(item.received_quantity);
+          
+          // Apply different validation logic based on unit and category
+          if (itemDetails[0].is_loose) {
+            const minQty = parseFloat(itemDetails[0].min_order_quantity);
+            const step = parseFloat(itemDetails[0].increment_step);
+            
+            // Check minimum quantity
+            if (receivedQty < minQty) {
+              return res.status(400).json({
+                success: false,
+                message: `Item #${item.item_id} has a minimum quantity of ${minQty} ${unit}`
+              });
+            }
+            
+            // Check increment step for loose items only
+            if ((receivedQty - minQty) % step !== 0) {
+              return res.status(400).json({
+                success: false,
+                message: `Item #${item.item_id} must be ordered in increments of ${step} ${unit} starting from ${minQty} ${unit}`
+              });
+            }
+          } else {
+            // For non-loose items, the quantity must be a whole number
+            if (!Number.isInteger(receivedQty)) {
+              return res.status(400).json({
+                success: false,
+                message: `Item #${item.item_id} must have a whole number quantity (pieces)`
+              });
+            }
+          }
+        }
+      } catch (itemCheckError) {
+        console.error("Error checking item details:", itemCheckError);
+        // Continue with the process even if checking fails
+      }
     }
     
+    // Create the GRN with proper unit tracking
     const result = await GRN.create({
       supplier_id,
       po_reference,
       received_date,
-      received_by: req.user.id, // From auth middleware
+      received_by: req.user.id,
       notes
-    }, items); // Items now can include selling_price
+    }, items);
     
     res.status(201).json({
       success: true,
@@ -40,9 +93,11 @@ export const createGRN = async (req, res) => {
     console.error("Error creating GRN:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to create GRN",
-      error: error.message
+      message: "Failed to create GRN: " + error.message
     });
+  } finally {
+    // Release the connection back to the pool
+    connection.release();
   }
 };
 

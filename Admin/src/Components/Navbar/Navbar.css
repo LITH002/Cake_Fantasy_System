@@ -34,9 +34,24 @@
 }
 
 .user-role {
-    color: #ffc0b0;
+    color: white;
     font-size: 12px;
     margin: 0;
+    padding: 2px 8px;
+    border-radius: 10px;
+    display: inline-block;
+}
+
+.user-role.employee {
+    background-color: #4a90e2;
+}
+
+.user-role.admin {
+    background-color: #f5a623;
+}
+
+.user-role.owner {
+    background-color: #d0021b;
 }
 
 .profile-dropdown {

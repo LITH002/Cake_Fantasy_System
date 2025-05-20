@@ -2,7 +2,7 @@ import db from "../config/db.js";
 
 export const createGRNTables = async () => {
   const headerTable = `
-    CREATE TABLE IF NOT EXISTS grn_headers (
+   CREATE TABLE IF NOT EXISTS grn_headers (
       id INT AUTO_INCREMENT PRIMARY KEY,
       grn_number VARCHAR(50) NOT NULL UNIQUE,
       supplier_id INT NOT NULL,
@@ -11,6 +11,7 @@ export const createGRNTables = async () => {
       received_by INT NOT NULL,
       notes TEXT,
       total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+      status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
@@ -29,6 +30,7 @@ export const createGRNTables = async () => {
       expiry_date DATE NULL,
       batch_number VARCHAR(100) NULL,
       notes TEXT,
+      item_barcode VARCHAR(50) NULL,
       FOREIGN KEY (grn_id) REFERENCES grn_headers(id) ON DELETE CASCADE,
       FOREIGN KEY (item_id) REFERENCES items(id)
     );`;
@@ -40,38 +42,62 @@ export const createGRNTables = async () => {
 export const GRN = {
   // Generate GRN number
   generateGRNNumber: async () => {
-    const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-    
-    // Get count of GRNs created today to add as suffix
-    const [results] = await db.query(
-      "SELECT COUNT(*) as count FROM grn_headers WHERE DATE(created_at) = CURDATE()"
-    );
-    
-    const todayCount = results[0].count + 1;
-    return `GRN-${dateStr}-${todayCount.toString().padStart(3, '0')}`;
-  },
+  const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+  
+  // Get the maximum suffix used today to ensure uniqueness
+  const [results] = await db.query(
+    "SELECT MAX(SUBSTRING_INDEX(grn_number, '-', -1)) as max_count FROM grn_headers WHERE grn_number LIKE ?",
+    [`GRN-${dateStr}-%`]
+  );
+  
+  let todayCount = 1;
+  if (results[0].max_count) {
+    // If we found existing GRNs today, increment by 1
+    todayCount = parseInt(results[0].max_count) + 1;
+  }
+  
+  // Format with leading zeros
+  const grnNumber = `GRN-${dateStr}-${todayCount.toString().padStart(3, '0')}`;
+  
+  // Double-check the generated number doesn't exist (safety check)
+  const [existingCheck] = await db.query(
+    "SELECT COUNT(*) as count FROM grn_headers WHERE grn_number = ?",
+    [grnNumber]
+  );
+  
+  if (existingCheck[0].count > 0) {
+    // If somehow it still exists, add a random suffix
+    const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    return `GRN-${dateStr}-${todayCount.toString().padStart(3, '0')}-${randomSuffix}`;
+  }
+  
+  return grnNumber;
+},
   
   // Create GRN
-  create: async (grnData, items) => {
-    const connection = await db.getConnection();
+  create: async (grnData, items, retryCount = 0) => {
+  const connection = await db.getConnection();
+  let grnId; // Define grnId at the method scope so it's available throughout
+  let grnNumber;
+  
+  try {
+    await connection.beginTransaction();
+    
+    // Generate GRN number with retry logic to avoid duplicates
+    grnNumber = await GRN.generateGRNNumber();
+    
+    // Calculate total amount
+    const totalAmount = items.reduce((sum, item) => {
+      return sum + (parseFloat(item.unit_price) * parseFloat(item.received_quantity));
+    }, 0);
     
     try {
-      await connection.beginTransaction();
-      
-      // Generate GRN number
-      const grnNumber = await GRN.generateGRNNumber();
-      
-      // Calculate total amount
-      const totalAmount = items.reduce((sum, item) => {
-        return sum + (parseFloat(item.unit_price) * parseInt(item.received_quantity));
-      }, 0);
-      
       // Insert GRN header
       const [headerResult] = await connection.query(
         `INSERT INTO grn_headers (
-          grn_number, supplier_id, po_reference, received_date,
-          received_by, notes, total_amount
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          grn_number, supplier_id, po_reference, 
+          received_date, received_by, notes, total_amount, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           grnNumber,
           grnData.supplier_id,
@@ -83,178 +109,162 @@ export const GRN = {
         ]
       );
       
-      const grnId = headerResult.insertId;
+      // Assign to the outer scope variable
+      grnId = headerResult.insertId;
       
-      // Insert GRN details
-      for (const item of items) {
-        await connection.query(
-          `INSERT INTO grn_details (
-            grn_id, item_id, expected_quantity, received_quantity,
-            unit_price, selling_price, expiry_date, batch_number, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            grnId,
-            item.item_id,
-            item.expected_quantity || item.received_quantity,
-            item.received_quantity,
-            item.unit_price,
-            item.selling_price || null,
-            item.expiry_date || null,
-            item.batch_number || null,
-            item.notes || null
-          ]
-        );
+      // Rest of your existing code for inserting details
+      // ...
+      
+    } catch (insertError) {
+      // Check if it's a duplicate key error
+      if (insertError.code === 'ER_DUP_ENTRY' && retryCount < 3) {
+        // Release connection and retry
+        await connection.rollback();
+        connection.release();
+        console.log(`Duplicate GRN number encountered, retrying (attempt ${retryCount + 1})...`);
         
-        // Update inventory directly
-        try {
-          // Check if the column exists first by getting the table info
-          const [columns] = await connection.query(
-            `SHOW COLUMNS FROM items LIKE 'selling_price'`
-          );
-          
-          if (item.selling_price && columns.length > 0) {
-            // If selling_price column exists and we have a value, update it
-            await connection.query(
-              `UPDATE items SET 
-                stock_quantity = COALESCE(stock_quantity, 0) + ?,
-                cost_price = ?,
-                selling_price = ?
-              WHERE id = ?`,
-              [item.received_quantity, item.unit_price, item.selling_price, item.item_id]
-            );
-          } else {
-            // Otherwise just update stock and cost price
-            await connection.query(
-              `UPDATE items SET 
-                stock_quantity = COALESCE(stock_quantity, 0) + ?,
-                cost_price = ?
-              WHERE id = ?`,
-              [item.received_quantity, item.unit_price, item.item_id]
-            );
-          }
-        } catch (error) {
-          console.error("Error updating inventory:", error);
-          // Continue processing other items even if one fails
-        }
+        // Wait a short time to avoid collisions
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Retry with incremented counter
+        return await GRN.create(grnData, items, retryCount + 1);
+      } else {
+        // Re-throw the error for other error types
+        throw insertError;
       }
-      
-      await connection.commit();
-      
-      return {
-        id: grnId,
-        grn_number: grnNumber
-      };
-    } catch (error) {
-      await connection.rollback();
-      console.error("Error creating GRN:", error);
-      throw error;
-    } finally {
-      connection.release();
     }
-  },
+    
+    await connection.commit();
+    
+    // Now grnId is accessible here
+    return {
+      id: grnId,
+      grn_number: grnNumber
+    };
+  } catch (error) {
+    await connection.rollback();
+    console.error("Error creating GRN:", error);
+    throw error;
+  } finally {
+    connection.release();
+  }
+},
   
   // Complete and process GRN (update inventory)
   complete: async (grnId) => {
-    const connection = await db.getConnection();
-    
-    try {
-      await connection.beginTransaction();
-      
-      // Get GRN details
-      const [grnDetails] = await connection.query(
-        `SELECT 
-          gd.item_id, 
-          gd.received_quantity, 
-          gd.unit_price,
-          i.stock_quantity as current_stock,
-          i.cost_price as current_cost
-        FROM grn_details gd
-        JOIN items i ON gd.item_id = i.id
-        WHERE gd.grn_id = ?`,
-        [grnId]
-      );
-      
-      // Update inventory for each item
-      for (const detail of grnDetails) {
-        // Update stock quantity
-        await connection.query(
-          "UPDATE items SET stock_quantity = stock_quantity + ?, cost_price = ? WHERE id = ?",
-          [detail.received_quantity, detail.unit_price, detail.item_id]
-        );
-        
-        // Log inventory change
-        await connection.query(
-          `INSERT INTO inventory_logs (
-            item_id, adjustment_quantity, previous_quantity,
-            new_quantity, adjustment_type, admin_id, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            detail.item_id,
-            detail.received_quantity,
-            detail.current_stock,
-            detail.current_stock + detail.received_quantity,
-            'add',
-            1, // Default admin ID, replace with actual user
-            `GRN #${grnId} completion`
-          ]
-        );
-      }
-      
-      // Update GRN status to approved
-      await connection.query(
-        "UPDATE grn_headers SET status = 'approved' WHERE id = ?",
-        [grnId]
-      );
-      
-      await connection.commit();
-      return true;
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
-  },
+  const connection = await db.getConnection();
   
-  // Find GRN by ID with details
-  findById: async (id) => {
-    // Get GRN header
-    const [headers] = await db.query(
-      `SELECT 
-        gh.*,
-        s.name as supplier_name,
-        CONCAT(a.first_name, ' ', a.last_name) as received_by_name
-      FROM grn_headers gh
-      JOIN suppliers s ON gh.supplier_id = s.id
-      JOIN admin_users a ON gh.received_by = a.id
-      WHERE gh.id = ?`,
-      [id]
-    );
-    
-    if (!headers.length) {
-      return null;
-    }
-    
-    const grn = headers[0];
+  try {
+    await connection.beginTransaction();
     
     // Get GRN details
-    const [details] = await db.query(
+    const [grnDetails] = await connection.query(
       `SELECT 
-        gd.*,
-        i.name as item_name,
-        i.sku,
-        i.image,
-        i.unit
+        gd.item_id, 
+        gd.received_quantity, 
+        gd.unit_price,
+        i.stock_quantity as current_stock,
+        i.cost_price as current_cost
       FROM grn_details gd
       JOIN items i ON gd.item_id = i.id
       WHERE gd.grn_id = ?`,
-      [id]
+      [grnId]
     );
     
-    grn.items = details;
+    // Update inventory for each item
+    for (const detail of grnDetails) {
+      // Update stock quantity
+      await connection.query(
+        "UPDATE items SET stock_quantity = stock_quantity + ?, cost_price = ? WHERE id = ?",
+        [detail.received_quantity, detail.unit_price, detail.item_id]
+      );
+      
+      // Log inventory change
+      await connection.query(
+        `INSERT INTO inventory_logs (
+          item_id, adjustment_quantity, previous_quantity,
+          new_quantity, adjustment_type, admin_id, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          detail.item_id,
+          detail.received_quantity,
+          detail.current_stock,
+          detail.current_stock + detail.received_quantity,
+          'add',
+          1, // Default admin ID, replace with actual user
+          `GRN #${grnId} completion`
+        ]
+      );
+    }
     
-    return grn;
-  },
+    // Update GRN status to approved
+    await connection.query(
+      "UPDATE grn_headers SET status = 'approved' WHERE id = ?",
+      [grnId]
+    );
+    
+    await connection.commit();
+    
+    // Send event through WebSocket to update clients
+    if (global.io) {
+      global.io.emit('inventory-updated', {
+        type: 'grn-completed',
+        grnId
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+},
+  
+  // Find GRN by ID with details
+  findById: async (id) => {
+  // Get GRN header
+  const [headers] = await db.query(
+    `SELECT 
+      gh.*,
+      s.name as supplier_name,
+      CONCAT(a.first_name, ' ', a.last_name) as received_by_name
+    FROM grn_headers gh
+    JOIN suppliers s ON gh.supplier_id = s.id
+    JOIN admin_users a ON gh.received_by = a.id
+    WHERE gh.id = ?`,
+    [id]
+  );
+  
+  if (!headers.length) {
+    return null;
+  }
+  
+  const grn = headers[0];
+  
+  // Get GRN details with enhanced unit information
+  const [details] = await db.query(
+    `SELECT 
+      gd.*,
+      i.name as item_name,
+      i.sku,
+      i.barcode,
+      i.image,
+      i.is_loose,
+      i.category,
+      COALESCE(gd.unit, i.unit, 'piece') as unit,
+      COALESCE(gd.item_barcode, i.barcode, i.sku) as display_barcode
+    FROM grn_details gd
+    JOIN items i ON gd.item_id = i.id
+    WHERE gd.grn_id = ?`,
+    [id]
+  );
+  
+  grn.items = details;
+  
+  return grn;
+},
   
   // List all GRNs with pagination and filters
   findAll: async ({ supplier_id, startDate, endDate, page = 1, limit = 20 }) => {

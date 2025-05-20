@@ -14,6 +14,8 @@ import adminRouter from './routes/adminRoute.js';
 import { createAdminTable } from './models/adminModel.js';
 import supplierRouter from './routes/supplierRoute.js';
 import grnRouter from './routes/grnRoute.js';
+import router from "./routes/reviewRoute.js";
+import createReviewsTable from "./models/reviewModel.js";
 
 const app = express();
 const port = 4000;
@@ -41,6 +43,24 @@ app.use("/api/order", orderRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/supplier', supplierRouter);
 app.use('/api/grn', grnRouter);
+app.use('/api/review', router);
+
+// Add this temporary debug endpoint
+app.get('/debug/user-structure', async (req, res) => {
+  try {
+    const [columns] = await db.query('SHOW COLUMNS FROM users');
+    res.json({
+      success: true,
+      columns: columns.map(col => col.Field)
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching table structure',
+      error: error.message
+    });
+  }
+});
 
 // Async server startup
 const startServer = async () => {
@@ -50,7 +70,8 @@ const startServer = async () => {
       userTables(),
       createItemTable(),
       createOrderTables(),
-      createAdminTable()
+      createAdminTable(),
+      createReviewsTable()
     ]);
     
     app.listen(port, () => {

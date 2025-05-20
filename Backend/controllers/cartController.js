@@ -14,16 +14,77 @@ const addToCart = async (req, res) => {
             });
         }
 
-        // Check if item exists
-        const [item] = await db.query(
-            "SELECT id FROM items WHERE id = ?",
+        // Check if item exists and get its details for validation
+        const [items] = await db.query(
+            `SELECT 
+                id, 
+                name, 
+                selling_price, 
+                stock_quantity, 
+                unit, 
+                is_loose, 
+                min_order_quantity, 
+                increment_step, 
+                weight_value, 
+                weight_unit
+            FROM items 
+            WHERE id = ?`,
             [item_id]
         );
         
-        if (!item.length) {
+        if (!items.length) {
             return res.status(404).json({
                 success: false,
                 message: "Item not found"
+            });
+        }
+
+        const item = items[0];
+        const parsedQuantity = parseFloat(quantity);
+
+        // Validate quantity is a positive number
+        if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Quantity must be a positive number"
+            });
+        }
+
+        // Validate quantity for loose items
+        if (item.is_loose) {
+            // Check if quantity meets minimum order requirement
+            if (parsedQuantity < item.min_order_quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Minimum order quantity is ${item.min_order_quantity} ${item.unit} for this item`
+                });
+            }
+            
+            // Check if quantity is in valid increments
+            if (item.increment_step > 0) {
+                const remainder = (parsedQuantity - item.min_order_quantity) % item.increment_step;
+                if (remainder !== 0 && parsedQuantity !== item.min_order_quantity) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Quantity must be in increments of ${item.increment_step} ${item.unit} starting from ${item.min_order_quantity} ${item.unit}`
+                    });
+                }
+            }
+        } else {
+            // For non-loose items, quantity must be a whole number
+            if (!Number.isInteger(parsedQuantity)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Quantity must be a whole number for this item"
+                });
+            }
+        }
+
+        // Check if enough stock is available
+        if (parsedQuantity > item.stock_quantity) {
+            return res.status(400).json({
+                success: false,
+                message: `Only ${item.stock_quantity} ${item.unit} available in stock`
             });
         }
 
@@ -38,12 +99,22 @@ const addToCart = async (req, res) => {
         `, [userId, item_id]);
 
         if (existing.length > 0) {
+            // Check if total quantity would exceed stock
+            const newTotalQuantity = parseFloat(existing[0].quantity) + parsedQuantity;
+            
+            if (newTotalQuantity > item.stock_quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Cannot add ${parsedQuantity} ${item.unit} more. You already have ${existing[0].quantity} ${item.unit} in your cart and only ${item.stock_quantity} ${item.unit} is available.`
+                });
+            }
+            
             // Update quantity
             await db.query(`
                 UPDATE order_items 
                 SET quantity = quantity + ? 
                 WHERE id = ?
-            `, [quantity, existing[0].id]);
+            `, [parsedQuantity, existing[0].id]);
         } else {
             // Get or create cart order
             let [order] = await db.query(`
@@ -75,17 +146,20 @@ const addToCart = async (req, res) => {
                     item_id, 
                     quantity, 
                     price
-                ) SELECT 
-                    ?, 
-                    ?, 
-                    ?, 
-                    price 
-                FROM items 
-                WHERE id = ?
-            `, [order.id, item_id, quantity, item_id]);
+                ) VALUES (?, ?, ?, ?)
+            `, [order.id, item_id, parsedQuantity, item.selling_price]);
         }
 
-        res.json({ success: true, message: "Added to cart" });
+        res.json({ 
+            success: true, 
+            message: `Added ${parsedQuantity} ${item.unit} of ${item.name} to cart`,
+            data: {
+                item_id: item.id,
+                name: item.name,
+                quantity: parsedQuantity,
+                unit: item.unit
+            }
+        });
     } catch (error) {
         console.error("Cart add error:", error);
         res.status(500).json({
@@ -96,16 +170,146 @@ const addToCart = async (req, res) => {
     }
 };
 
-// Add debugging to removeFromCart
+// Update item quantity in cart
+const updateCartItem = async (req, res) => {
+    try {
+        const { item_id, quantity } = req.body;
+        const userId = req.user.id;
+        
+        if (!item_id || quantity === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: "Item ID and quantity are required"
+            });
+        }
+        
+        const parsedQuantity = parseFloat(quantity);
+        
+        // If quantity is 0, remove the item
+        if (parsedQuantity === 0) {
+            return removeFromCart(req, res);
+        }
+        
+        // Validate quantity is positive
+        if (isNaN(parsedQuantity) || parsedQuantity < 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Quantity must be a positive number"
+            });
+        }
+        
+        // Get item details for validation
+        const [items] = await db.query(
+            `SELECT 
+                id, 
+                name, 
+                stock_quantity, 
+                unit, 
+                is_loose, 
+                min_order_quantity, 
+                increment_step
+            FROM items 
+            WHERE id = ?`,
+            [item_id]
+        );
+        
+        if (!items.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found"
+            });
+        }
+        
+        const item = items[0];
+        
+        // Validate quantity for loose items
+        if (item.is_loose) {
+            // Check if quantity meets minimum order requirement
+            if (parsedQuantity < item.min_order_quantity) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Minimum order quantity is ${item.min_order_quantity} ${item.unit} for this item`
+                });
+            }
+            
+            // Check if quantity is in valid increments
+            if (item.increment_step > 0) {
+                const remainder = (parsedQuantity - item.min_order_quantity) % item.increment_step;
+                if (remainder !== 0 && parsedQuantity !== item.min_order_quantity) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Quantity must be in increments of ${item.increment_step} ${item.unit} starting from ${item.min_order_quantity} ${item.unit}`
+                    });
+                }
+            }
+        } else {
+            // For non-loose items, quantity must be a whole number
+            if (!Number.isInteger(parsedQuantity)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Quantity must be a whole number for this item"
+                });
+            }
+        }
+        
+        // Check if enough stock is available
+        if (parsedQuantity > item.stock_quantity) {
+            return res.status(400).json({
+                success: false,
+                message: `Only ${item.stock_quantity} ${item.unit} available in stock`
+            });
+        }
+        
+        // Find the cart and item
+        const [cartItems] = await db.query(`
+            SELECT oi.id
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE o.user_id = ? 
+            AND oi.item_id = ? 
+            AND o.status = 'cart'
+        `, [userId, item_id]);
+        
+        if (!cartItems.length) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found in cart"
+            });
+        }
+        
+        // Update the quantity
+        await db.query(`
+            UPDATE order_items 
+            SET quantity = ? 
+            WHERE id = ?
+        `, [parsedQuantity, cartItems[0].id]);
+        
+        res.json({
+            success: true,
+            message: `Updated quantity to ${parsedQuantity} ${item.unit}`,
+            data: {
+                item_id: item.id,
+                name: item.name,
+                quantity: parsedQuantity,
+                unit: item.unit
+            }
+        });
+    } catch (error) {
+        console.error("Cart update error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 const removeFromCart = async (req, res) => {
     try {
         const { item_id } = req.body;
         const userId = req.user.id;
         
-        console.log(`Request to remove item #${item_id} from cart for user #${userId}`);
-        
         if (!item_id) {
-            console.log("Missing item_id in request");
             return res.status(400).json({
                 success: false,
                 message: "Item ID is required"
@@ -122,7 +326,6 @@ const removeFromCart = async (req, res) => {
         `, [userId]);
         
         if (cart.length === 0) {
-            console.log(`No cart found for user #${userId}`);
             return res.status(404).json({
                 success: false,
                 message: "Cart not found"
@@ -130,7 +333,14 @@ const removeFromCart = async (req, res) => {
         }
         
         const orderId = cart[0].id;
-        console.log(`Found cart #${orderId} for user #${userId}`);
+
+        // Get item name and unit for better response message
+        const [itemDetails] = await db.query(`
+            SELECT i.name, i.unit
+            FROM items i
+            JOIN order_items oi ON i.id = oi.item_id
+            WHERE oi.order_id = ? AND oi.item_id = ?
+        `, [orderId, item_id]);
 
         // Remove item from cart
         const [result] = await db.query(`
@@ -139,8 +349,6 @@ const removeFromCart = async (req, res) => {
             AND item_id = ?
         `, [orderId, item_id]);
         
-        console.log(`Removed item #${item_id} from cart #${orderId}, affected rows: ${result.affectedRows}`);
-        
         if (result.affectedRows === 0) {
             return res.status(404).json({
                 success: false,
@@ -148,12 +356,18 @@ const removeFromCart = async (req, res) => {
             });
         }
 
-        res.json({ success: true, message: "Removed from cart" });
+        res.json({ 
+            success: true, 
+            message: itemDetails.length > 0 
+                ? `Removed ${itemDetails[0].name} from cart` 
+                : "Removed item from cart" 
+        });
     } catch (error) {
         console.error("Cart remove error:", error);
         res.status(500).json({
             success: false,
-            message: "Internal server error"
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
@@ -162,15 +376,21 @@ const getCart = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Get cart items with details
+        // Get cart items with details including unit information
         const [items] = await db.query(`
             SELECT 
                 oi.item_id AS id,
                 i.name,
                 i.image,
-                i.price,
+                i.selling_price AS price,
+                i.unit,
+                i.is_loose,
+                i.min_order_quantity,
+                i.increment_step,
+                i.weight_value,
+                i.weight_unit,
                 oi.quantity,
-                (i.price * oi.quantity) AS total_price
+                (i.selling_price * oi.quantity) AS total_price
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.id
             JOIN items i ON oi.item_id = i.id
@@ -180,7 +400,7 @@ const getCart = async (req, res) => {
 
         // Calculate cart total
         const [total] = await db.query(`
-            SELECT SUM(i.price * oi.quantity) AS total
+            SELECT SUM(i.selling_price * oi.quantity) AS total
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.id
             JOIN items i ON oi.item_id = i.id
@@ -188,11 +408,27 @@ const getCart = async (req, res) => {
             AND o.status = 'cart'
         `, [userId]);
 
+        // Format the quantities based on item type
+        const formattedItems = items.map(item => ({
+            ...item,
+            formatted_quantity: `${item.quantity} ${item.unit}`,
+            // Add increment steps for the UI
+            quantity_options: item.is_loose ? 
+                generateQuantityOptions(
+                    item.min_order_quantity, 
+                    item.increment_step, 
+                    Math.min(item.stock_quantity, 1000), // Cap at 1000 for UI performance
+                    item.unit
+                ) : 
+                generateWholeNumberOptions(1, Math.min(item.stock_quantity, 100), item.unit) // Cap at 100 for UI
+        }));
+
         res.json({
             success: true,
             data: {
-                items,
-                total: total[0].total || 0
+                items: formattedItems,
+                total: total[0].total || 0,
+                item_count: items.length
             }
         });
     } catch (error) {
@@ -204,4 +440,68 @@ const getCart = async (req, res) => {
     }
 };
 
-export { addToCart, removeFromCart, getCart };
+// Helper function to generate quantity options for loose items
+const generateQuantityOptions = (minQty, step, maxQty, unit) => {
+    const options = [];
+    let currentQty = minQty;
+    
+    while (currentQty <= maxQty) {
+        options.push({
+            value: currentQty,
+            label: `${currentQty} ${unit}`
+        });
+        currentQty += step;
+    }
+    
+    return options;
+};
+
+// Helper function to generate quantity options for whole number items
+const generateWholeNumberOptions = (min, max, unit) => {
+    return Array.from({ length: max - min + 1 }, (_, i) => ({
+        value: min + i,
+        label: `${min + i} ${unit}`
+    }));
+};
+
+// Empty cart completely
+const emptyCart = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Find user's cart
+        const [cart] = await db.query(`
+            SELECT id 
+            FROM orders 
+            WHERE user_id = ? 
+            AND status = 'cart'
+            LIMIT 1
+        `, [userId]);
+        
+        if (cart.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Cart not found"
+            });
+        }
+        
+        // Remove all items from cart
+        await db.query(`
+            DELETE FROM order_items
+            WHERE order_id = ?
+        `, [cart[0].id]);
+        
+        res.json({
+            success: true,
+            message: "Cart emptied successfully"
+        });
+    } catch (error) {
+        console.error("Empty cart error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to empty cart"
+        });
+    }
+};
+
+export { addToCart, updateCartItem, removeFromCart, getCart, emptyCart };

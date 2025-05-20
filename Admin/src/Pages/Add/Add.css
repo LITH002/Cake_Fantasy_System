@@ -1,42 +1,243 @@
-.add {
-    width: 70%;
-    margin-left: max(5vw, 25px);
-    margin-top: 50px;
-    color: #6d6d6d;
-    font-size: 16px;
+.add-item-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.add form{
+.add-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.add-item-header h2 {
+  margin: 0;
+  color: #591b0d;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.back-btn:hover {
+  background-color: #5a6268;
+}
+
+.add-item-form {
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.form-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #444;
+  font-size: 14px;
+}
+
+.form-input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-input.textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form-helper-text {
+  font-size: 12px;
+  color: #6c757d;
+  margin-top: 3px;
+}
+
+.add-img-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.image-upload-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.image-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 200px;
+  padding: 15px;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.image-upload-label:hover {
+  border-color: #591b0d;
+  background-color: rgba(89, 27, 13, 0.05);
+}
+
+.upload-preview {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+}
+
+.upload-text {
+  font-size: 12px;
+  color: #6c757d;
+  text-align: center;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.cancel-btn, .submit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background-color: #f2f2f2;
+  color: #666;
+}
+
+.submit-btn {
+  background-color: #591b0d;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.submit-btn:hover {
+  background-color: #7a2917;
+}
+
+.submit-btn:disabled {
+  background-color: #a97c72;
+  cursor: not-allowed;
+}
+
+.button-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.half-width {
+  flex: 1;
+  min-width: 0;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.checkbox-label span {
+  font-weight: 500;
+  color: #444;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .form-columns {
+    grid-template-columns: 1fr;
     gap: 20px;
-}
-
-.add-img-upload img{
-    width: 120px;
-}
-
-.add-product-description, .add-product-name {
-    width: max(40%, 280px);
-}
-
-.add-product-name input, .add-product-description textarea {
-    padding: 10px;
-}
-
-.add-category-price {
-    display: flex;
-    gap: 30px;
-}
-
-.add-category-price select, .add-category-price input {
-    max-width: 120px;
-    padding: 10px;
-}
-
-.add-btn {
-    max-width: 120px;
-    border: none;
-    padding: 10px;
-    background-color: black;
-    color: white;
-    cursor: pointer;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .cancel-btn, .submit-btn {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+  
+  .add-item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .back-btn {
+    width: 100%;
+  }
 }

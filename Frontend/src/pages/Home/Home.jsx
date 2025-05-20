@@ -9,8 +9,8 @@ const Home = () => {
   return (
     <div>
         <Header/>
-        <ExploreCategories category={category} setCategory={setCategory}/>
-        <ItemDisplay category={category}/>
+        {/* <ExploreCategories category={category} setCategory={setCategory}/> */}
+        {/* <ItemDisplay category={category}/> */}
     </div>
   )
 }

@@ -176,6 +176,7 @@ const GRNDetails = ({ url }) => {
               <thead>
                 <tr>
                   <th className="item-name-col">Item Name</th>
+                  <th className="item-code-col">SKU/Barcode</th>
                   <th className="quantity-col">Quantity</th>
                   <th className="price-col">Purchase Price</th>
                   <th className="price-col">Selling Price</th>
@@ -187,8 +188,12 @@ const GRNDetails = ({ url }) => {
                 {(grn.items || []).length > 0 ? (
                   grn.items.map((item, index) => (
                     <tr key={index}>
-                      <td className="item-name-col">{item.name || 'Unknown'}</td>
-                      <td className="quantity-col">{item.quantity || item.received_quantity || 0}</td>
+                      <td className="item-name-col">{item.name || item.item_name || 'Unknown'}</td>
+                      <td className="item-code-col">{item.display_barcode || item.barcode || item.sku || 'N/A'}</td>
+                      <td className="quantity-col">
+                        {item.quantity || item.received_quantity || 0}
+                        <span className="unit-badge">{item.unit || 'piece'}</span>
+                      </td>
                       <td className="price-col">LKR {parseFloat(item.unit_price || 0).toFixed(2)}</td>
                       <td className="price-col">
                         {item.selling_price 
