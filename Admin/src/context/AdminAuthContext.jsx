@@ -41,27 +41,22 @@ export const AdminAuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthenticated(false);
   };
-
   // Check if user has required role
   const hasRole = (requiredRole) => {
     if (!user) return false;
     
-    // If requiredRole is "owner" only owner can access
-    if (requiredRole === 'owner') {
-      return user.role === 'owner';
-    }
+    // Define role hierarchy
+    const roleHierarchy = {
+      'employee': 1,
+      'admin': 2, 
+      'owner': 3
+    };
     
-    // If requiredRole is "employee" both employee and owner can access
-    if (requiredRole === 'employee') {
-      return user.role === 'employee' || user.role === 'owner';
-    }
+    const userRoleLevel = roleHierarchy[user.role] || 0;
+    const requiredRoleLevel = roleHierarchy[requiredRole] || 0;
     
-    // Admin role check (more general, for regular admin areas)
-    if (requiredRole === 'admin') {
-      return user.role === 'employee' || user.role === 'owner';
-    }
-    
-    return false;
+    // User can access if their role level is greater than or equal to the required level
+    return userRoleLevel >= requiredRoleLevel;
   };
 
   const value = {

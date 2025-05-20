@@ -15,12 +15,13 @@ const Navbar = () => {
   return (
     <div className='navbar'>
       <img className='logo' src={assets.font} alt="Cake Fantasy" />
-      
-      {user && (
+        {user && (
         <div className="user-section">
           <div className="user-info">
             <p className="user-name">{user.firstName} {user.lastName}</p>
-            <p className="user-role">{user.role === 'owner' ? 'Owner' : 'Employee'}</p>
+            <p className={`user-role ${user.role}`}>
+              {user.role === 'owner' ? 'Owner' : user.role === 'admin' ? 'Admin' : 'Employee'}
+            </p>
           </div>
           
           <div className="profile-dropdown">

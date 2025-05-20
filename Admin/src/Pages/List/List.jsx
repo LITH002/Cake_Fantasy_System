@@ -13,7 +13,7 @@ const List = ({url}) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
-  const { token } = useContext(AdminAuthContext);
+  const { token, hasRole } = useContext(AdminAuthContext);
 
   const fetchList = async () => {
     try {
@@ -100,16 +100,17 @@ const List = ({url}) => {
 
   useEffect(() => {
     fetchList();
-  }, []);
+  }, [fetchList]);
 
   return (
-    <div className='list-container'>
-      <div className="list-header">
+    <div className='list-container'>      <div className="list-header">
         <h2>Inventory Items</h2>
         <div className="list-actions">
-          <button className="add-new-btn" onClick={() => navigate('/add')}>
-            Add New Item
-          </button>
+          {hasRole('admin') && (
+            <button className="add-new-btn" onClick={() => navigate('/add')}>
+              Add New Item
+            </button>
+          )}
           <button className="bulk-barcode-btn" onClick={handleBulkBarcode}>
             Print Bulk Barcodes
           </button>
@@ -168,26 +169,30 @@ const List = ({url}) => {
                   <p className={`item-stock ${isLowStock ? 'low-stock' : ''}`}>
                     {stockDisplay}
                     {isLowStock && <span className="reorder-indicator">Low</span>}
-                  </p>
-                  <div className="action-buttons">
-                    <button 
-                      className="edit-btn" 
-                      onClick={() => handleEdit(item.id)}
-                    >
-                      Edit
-                    </button>
+                  </p>                  <div className="action-buttons">
+                    {hasRole('admin') && (
+                      <button 
+                        className="edit-btn" 
+                        onClick={() => handleEdit(item.id)}
+                      >
+                        Edit
+                      </button>
+                    )}
                     <button 
                       className="barcode-btn" 
                       onClick={() => handleBarcode(item.id)}
                     >
                       Barcode
                     </button>
-                    <button 
-                      className="delete-btn" 
-                      onClick={() => handleDeleteClick(item.id, item.name)}
-                    >
-                      Delete
-                    </button>
+                    {/* Only show delete button for admin and owner roles */}
+                    {hasRole('admin') && (
+                      <button 
+                        className="delete-btn" 
+                        onClick={() => handleDeleteClick(item.id, item.name)}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               );

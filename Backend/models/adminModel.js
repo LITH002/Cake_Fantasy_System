@@ -11,10 +11,19 @@ const createAdminTable = async () => {
       password VARCHAR(255) NOT NULL,
       first_name VARCHAR(100) NOT NULL,
       last_name VARCHAR(100) NOT NULL,
-      role ENUM('employee', 'owner') NOT NULL,
+      role ENUM('employee', 'admin', 'owner') NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`;
+  
+  // Execute the SQL statement to create the table
+  try {
+    await db.query(sql);
+    console.log("Admin users table initialized");
+  } catch (error) {
+    console.error("Error creating admin_users table:", error);
+    throw error;
+  }
 };
 
 // Admin User model
@@ -42,11 +51,22 @@ const Admin = {
       throw error;
     }
   },
-  
-  createEmployee: async (username, email, password, firstName, lastName) => {
+    createEmployee: async (username, email, password, firstName, lastName) => {
     try {
       const [result] = await db.query(
         "INSERT INTO admin_users (username, email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, 'employee')",
+        [username, email, password, firstName, lastName]
+      );
+      return result.insertId;
+    } catch (error) {
+      throw error;
+    }
+  },
+  
+  createAdmin: async (username, email, password, firstName, lastName) => {
+    try {
+      const [result] = await db.query(
+        "INSERT INTO admin_users (username, email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, 'admin')",
         [username, email, password, firstName, lastName]
       );
       return result.insertId;

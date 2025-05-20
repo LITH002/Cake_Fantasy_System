@@ -1,0 +1,337 @@
+.order-details-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.order-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.order-details-title {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.order-details-title h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #333;
+}
+
+.order-status {
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-processing {
+  background-color: #E3F2FD;
+  color: #1976D2;
+}
+
+.status-delivering {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.status-delivered {
+  background-color: #E0F2F1;
+  color: #00796B;
+}
+
+.status-cancelled {
+  background-color: #FFEBEE;
+  color: #C62828;
+}
+
+.order-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.generate-bill-btn,
+.back-btn {
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.generate-bill-btn {
+  background-color: #591b0d;
+  color: white;
+  border: none;
+}
+
+.generate-bill-btn:hover {
+  background-color: #7a2917;
+}
+
+.back-btn {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.back-btn:hover {
+  background-color: #e9e9e9;
+}
+
+.order-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.order-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.order-info-card,
+.customer-info-card {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.order-info-card h3,
+.customer-info-card h3,
+.order-items-section h3,
+.order-notes-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #333;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.info-label {
+  width: 130px;
+  font-weight: 500;
+  color: #555;
+}
+
+.info-value {
+  flex: 1;
+}
+
+.info-value.paid {
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.info-value.unpaid {
+  color: #f44336;
+  font-weight: 500;
+}
+
+.status-updates {
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 15px;
+}
+
+.status-update-section,
+.payment-update-section {
+  margin-bottom: 15px;
+}
+
+.status-update-section h4,
+.payment-update-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.status-buttons,
+.payment-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.status-btn,
+.payment-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.status-btn:hover,
+.payment-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.status-btn.active,
+.payment-btn.active {
+  background-color: #591b0d;
+  color: white;
+  border-color: #591b0d;
+}
+
+.status-btn.cancel-btn.active {
+  background-color: #C62828;
+  border-color: #C62828;
+}
+
+.status-btn:disabled,
+.payment-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.order-items-table-container {
+  overflow-x: auto;
+}
+
+.order-items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.order-items-table th {
+  background-color: #f5f5f5;
+  text-align: left;
+  padding: 12px 15px;
+  font-weight: 500;
+  color: #333;
+  border-bottom: 1px solid #ddd;
+}
+
+.order-items-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.item-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.order-items-table tfoot tr {
+  background-color: #f9f9f9;
+}
+
+.order-items-table tfoot tr.order-total {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.total-label {
+  text-align: right;
+}
+
+.order-notes-section {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.order-notes {
+  white-space: pre-wrap;
+}
+
+.order-details-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 50px;
+}
+
+.loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #591b0d;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.order-details-error {
+  text-align: center;
+  padding: 30px;
+}
+
+.order-details-error button {
+  padding: 8px 15px;
+  background-color: #591b0d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+@media (max-width: 992px) {
+  .order-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .order-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .order-actions {
+    width: 100%;
+  }
+  
+  .generate-bill-btn,
+  .back-btn {
+    flex: 1;
+  }
+  
+  .status-buttons,
+  .payment-buttons {
+    flex-direction: column;
+  }
+  
+  .status-btn,
+  .payment-btn {
+    width: 100%;
+  }
+}

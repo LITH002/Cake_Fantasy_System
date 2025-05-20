@@ -137,12 +137,16 @@ const PlaceOrder = () => {
           console.error("Failed to extract user ID from token:", err);
         }
       }
+        // Calculate total amount including delivery fee
+      const subtotal = getTotalCartAmount();
+      const deliveryFee = 150;
+      const totalAmount = subtotal + deliveryFee;
       
       // Prepare order data
       const orderData = {
         userId: userId,
         items: orderItems,
-        amount: getTotalCartAmount() + 150,
+        amount: totalAmount,
         address: formData.address,
         firstName: formData.firstName,
         lastName: formData.lastName,

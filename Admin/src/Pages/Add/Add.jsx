@@ -5,10 +5,11 @@ import assets from "../../assets/assets";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { AdminAuthContext } from '../../context/AdminAuthContext';
+import AccessDenied from "../../Components/AccessDenied/AccessDenied";
 
 const Add = ({url}) => {
   const navigate = useNavigate();
-  const { token } = useContext(AdminAuthContext);
+  const { token, hasRole } = useContext(AdminAuthContext);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState({
@@ -28,6 +29,11 @@ const Add = ({url}) => {
     pieces_per_pack: '',
     reorder_level: '5'
   });
+
+  // Check if user has admin privileges
+  if (!hasRole('admin')) {
+    return <AccessDenied />;
+  }
 
   const onChangeHandler = (event) => {
     const name = event.target.name;

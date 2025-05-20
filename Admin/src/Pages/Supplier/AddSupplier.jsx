@@ -22,7 +22,6 @@ const AddSupplier = ({ url }) => {
   const { token } = useContext(AdminAuthContext);
   const navigate = useNavigate();
 
-  // Fetch existing suppliers on component mount
   useEffect(() => {
     fetchExistingSuppliers();
   }, []);
@@ -53,14 +52,35 @@ const AddSupplier = ({ url }) => {
     });
   };
 
-  // Format phone number for consistent comparison
   const formatPhoneForComparison = (phone) => {
-    // Remove all non-digit characters
-    return phone.replace(/\D/g, '');
+    let digits = phone.replace(/\D/g, '');
+    // Convert local numbers (07) to international format (947)
+    if (digits.startsWith('0')) {
+      digits = '94' + digits.substring(1);
+    }
+    return digits;
+  };
+
+  const isValidSriLankanPhone = (phone) => {
+    const digitsOnly = phone.replace(/\D/g, '');
+    
+    if (/^(?:0|94|\+94)?7[0-9]{8}$/.test(digitsOnly)) {
+      return true;
+    }
+    
+    if (/^0[1-9][0-9]{8}$/.test(digitsOnly)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   };
 
   const checkForDuplicates = () => {
-    // Check for duplicate name (case insensitive)
     const nameExists = existingSuppliers.some(
       supplier => supplier.name.toLowerCase() === formData.name.toLowerCase()
     );
@@ -70,7 +90,6 @@ const AddSupplier = ({ url }) => {
       return true;
     }
     
-    // Check for duplicate phone (ignoring formatting)
     const formattedPhone = formatPhoneForComparison(formData.phone);
     const phoneExists = existingSuppliers.some(supplier => {
       const existingPhone = formatPhoneForComparison(supplier.phone);
@@ -82,7 +101,6 @@ const AddSupplier = ({ url }) => {
       return true;
     }
     
-    // Check for duplicate email if provided
     if (formData.email) {
       const emailExists = existingSuppliers.some(
         supplier => supplier.email && supplier.email.toLowerCase() === formData.email.toLowerCase()
@@ -94,11 +112,10 @@ const AddSupplier = ({ url }) => {
       }
     }
     
-    return false; // No duplicates found
+    return false;
   };
 
   const validateForm = () => {
-    // Only name and phone are required
     if (!formData.name.trim()) {
       toast.error("Supplier name is required");
       return false;
@@ -109,31 +126,23 @@ const AddSupplier = ({ url }) => {
       return false;
     }
     
-    // Improved phone validation for Sri Lankan numbers
-    const phoneRegex = /^(?:(?:\+94)|0)?[ -]?(?:\d[ -]?){9,10}$/;
-    
-    if (!phoneRegex.test(formData.phone.replace(/\s+/g, ' '))) {
-      toast.error("Please enter a valid Sri Lankan phone number");
+    if (!isValidSriLankanPhone(formData.phone)) {
+      toast.error("Please enter a valid Sri Lankan phone number\n" +
+        "Mobile: 07XXXXXXXX or +947XXXXXXXX\n" +
+        "Landline: 0XXYYYYYYY");
       return false;
     }
     
-    // If email is provided, validate its format
     if (formData.email && !isValidEmail(formData.email)) {
       toast.error("Please enter a valid email address");
       return false;
     }
     
-    // Check for duplicates
     if (checkForDuplicates()) {
       return false;
     }
     
     return true;
-  };
-  
-  const isValidEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   };
 
   const handleSubmit = async (e) => {
@@ -166,7 +175,6 @@ const AddSupplier = ({ url }) => {
     } catch (err) {
       console.error("Error adding supplier:", err);
       
-      // More detailed error handling
       if (err.response) {
         console.error("Error response:", err.response.data);
         toast.error(err.response.data?.message || "Error adding supplier");
@@ -182,7 +190,6 @@ const AddSupplier = ({ url }) => {
     }
   };
 
-  // Show loading state while fetching existing suppliers
   if (loading) {
     return (
       <div className="suppliers-loading">
@@ -192,7 +199,6 @@ const AddSupplier = ({ url }) => {
     );
   }
 
-  // Render form
   return (
     <div className="add-supplier-container">
       <div className="add-supplier-header">
@@ -242,10 +248,10 @@ const AddSupplier = ({ url }) => {
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                placeholder="e.g., +94 712345678"
+                placeholder="e.g., 0712345678 or +94 712345678"
                 required
               />
-              <small className="form-hint">Format: +94 712345678 or 0712345678</small>
+              <small className="form-hint">Mobile: 07XXXXXXXX or +947XXXXXXXX | Landline: 0XXYYYYYYY</small>
             </div>
             
             <div className="form-group">

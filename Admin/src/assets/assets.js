@@ -11,6 +11,8 @@ import avg_icon from './avg_icon.png';
 import out_of_stock from './out_of_stock.svg';
 import reports_icon from './reports_icon.svg';
 import grn_icon from './grn_icon.png';
+import bill_icon from './bill_icon.svg';
+import user_icon from './user_icon.svg';
 
 export const assets = {
     font,
@@ -25,7 +27,9 @@ export const assets = {
     avg_icon,
     out_of_stock,
     reports_icon,
-    grn_icon
+    grn_icon,
+    bill_icon,
+    user_icon
 };
 
 export default assets;

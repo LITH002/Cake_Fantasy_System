@@ -4,11 +4,12 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import './EditItem.css';
 import { AdminAuthContext } from '../../context/AdminAuthContext';
+import AccessDenied from "../../Components/AccessDenied/AccessDenied";
 
 const EditItem = ({ url }) => {
   const { itemId } = useParams();
   const navigate = useNavigate();
-  const { token } = useContext(AdminAuthContext);
+  const { token, hasRole } = useContext(AdminAuthContext);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState(null);
   const [formData, setFormData] = useState({
@@ -152,8 +153,12 @@ const EditItem = ({ url }) => {
       toast.error(error.response?.data?.message || "Error updating item");
     } finally {
       setLoading(false);
-    }
-  };
+    }  };
+
+  // Check if user has admin privileges
+  if (!hasRole('admin')) {
+    return <AccessDenied />;
+  }
 
   if (loading) {
     return <div className="edit-page-loading">

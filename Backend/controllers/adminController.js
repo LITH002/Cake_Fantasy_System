@@ -70,8 +70,8 @@ const adminLogin = async (req, res) => {
   }
 };
 
-// Create new admin account (employee only)
-const createEmployee = async (req, res) => {
+// Create new admin account
+const createAdmin = async (req, res) => {
   const { username, email, password, firstName, lastName } = req.body;
 
   try {
@@ -112,15 +112,84 @@ const createEmployee = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Create new admin account
+    const adminId = await Admin.createAdmin(username, email, hashedPassword, firstName, lastName);
+
+    // Return success response
+    res.status(201).json({ 
+      success: true, 
+      message: "Admin account created successfully",
+      user: {
+        id: adminId,
+        username,
+        firstName,
+        lastName,
+        email,
+        role: 'admin'
+      }
+    });
+
+  } catch (error) {
+    console.error("Create admin error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error", 
+      error: error.message 
+    });
+  }
+};
+
+// Create new employee account
+const createEmployee = async (req, res) => {
+  const { username, email, password, firstName, lastName } = req.body;
+
+  try {
+    // Validate required fields
+    if (!username || !email || !password || !firstName || !lastName) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "All fields are required" 
+      });
+    }
+
+    // Validate email format
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please enter a valid email" 
+      });
+    }
+
+    // Validate password length
+    if (password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Password must be at least 8 characters long" 
+      });
+    }
+
+    // Check if employee already exists
+    const existingEmployee = await Admin.findByEmail(email);
+    if (existingEmployee) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Email already in use" 
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     // Create new employee account
-    const adminId = await Admin.createEmployee(username, email, hashedPassword, firstName, lastName);
+    const employeeId = await Admin.createEmployee(username, email, hashedPassword, firstName, lastName);
 
     // Return success response
     res.status(201).json({ 
       success: true, 
       message: "Employee account created successfully",
       user: {
-        id: adminId,
+        id: employeeId,
         username,
         firstName,
         lastName,
@@ -684,4 +753,4 @@ const getReports = async (req, res) => {
 };
 
 // Add this to the exports
-export { adminLogin, createEmployee, getAllEmployees, updateEmployee, deleteEmployee, getDashboardData, getReports };
+export { adminLogin, createEmployee, createAdmin, getAllEmployees, updateEmployee, deleteEmployee, getDashboardData, getReports };

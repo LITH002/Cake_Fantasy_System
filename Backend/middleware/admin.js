@@ -1,6 +1,6 @@
 /**
  * Middleware to enforce admin role requirements
- * @param {string} requiredRole - 'employee' or 'owner' (default: any admin role)
+ * @param {string} requiredRole - 'employee', 'admin', or 'owner' (default: any admin role)
  */
 const adminMiddleware = (requiredRole = null) => (req, res, next) => {
   try {
@@ -20,12 +20,23 @@ const adminMiddleware = (requiredRole = null) => (req, res, next) => {
       });
     }
     
-    // If a specific role is required, check for it
-    if (requiredRole && requiredRole === 'owner' && req.user.role !== 'owner') {
-      return res.status(403).json({
-        success: false,
-        message: "Owner privileges required"
-      });
+    // If a specific role is required, check role hierarchy
+    if (requiredRole) {
+      const roleHierarchy = {
+        'employee': 1,
+        'admin': 2, 
+        'owner': 3
+      };
+
+      const userRoleLevel = roleHierarchy[req.user.role] || 0;
+      const requiredRoleLevel = roleHierarchy[requiredRole] || 0;
+      
+      if (userRoleLevel < requiredRoleLevel) {
+        return res.status(403).json({
+          success: false,
+          message: `${requiredRole.charAt(0).toUpperCase() + requiredRole.slice(1)} privileges required`
+        });
+      }
     }
     
     next();

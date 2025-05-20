@@ -6,6 +6,7 @@ import './ProductDetail.css';
 import { toast } from 'react-toastify';
 import ReviewSection from '../../components/ReviewSection/ReviewSection';
 import ErrorBoundary from '../ErrorBoundary/ErrorBoundary';
+import io from 'socket.io-client';
 
 const ProductDetail = () => {
   const { itemId } = useParams();
@@ -16,218 +17,385 @@ const ProductDetail = () => {
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [quantityOptions, setQuantityOptions] = useState([]);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   
-  // Fetch item details
   useEffect(() => {
-    window.scrollTo(0, 0);
-    const fetchItemDetails = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`${url}/api/item/${itemId}`);
-        
-        if (response.data.success) {
-          setProduct(response.data.data);
-          
-          // Generate quantity options based on product properties
-          if (response.data.data.is_loose) {
-            // For loose items, generate options based on min order and increment
-            const min = parseFloat(response.data.data.min_order_quantity);
-            const step = parseFloat(response.data.data.increment_step);
-            const max = Math.min(parseFloat(response.data.data.stock_quantity), 1000);
-            
-            let currentQty = min;
-            const options = [];
-            
-            while (currentQty <= max) {
-              options.push({
-                value: currentQty,
-                label: `${currentQty} ${response.data.data.unit}`
-              });
-              currentQty += step;
-            }
-            
-            setQuantityOptions(options);
-          } else {
-            // For non-loose items, generate whole number options
-            const max = Math.min(parseInt(response.data.data.stock_quantity), 100);
-            const options = Array.from({ length: max }, (_, i) => ({
-              value: i + 1,
-              label: `${i + 1} ${response.data.data.unit}`
-            }));
-            
-            setQuantityOptions(options);
-          }
-        } else {
-          setError('Failed to fetch product details');
-        }
-      } catch (err) {
-        console.error('Error fetching product details:', err);
-        setError('Error loading product details');
-      } finally {
-        setLoading(false);
+    const socket = io(url.replace('/api', ''));
+    socket.on('inventory-updated', (data) => {
+      if (data.type === 'grn-completed') {
+        fetchItemDetails();
       }
-    };
-    
-    fetchItemDetails();
-  }, [url, itemId]);
+    });
+    return () => socket.disconnect();
+  }, []);
   
-  // Handle quantity change
-  const handleQuantityChange = (e) => {
-    setQuantity(parseFloat(e.target.value));
-  };
-  
-  // Handle add to cart
-  const handleAddToCart = () => {
-    if (!product) return;
-    
+  const fetchItemDetails = async () => {
     try {
-      // If the product is already in cart, we need to remove it first to set the exact quantity
-      if (cartItems[product.id]) {
-        removeFromCart(product.id);
-      }
+      setLoading(true);
+      const response = await axios.get(`${url}/api/item/${itemId}`);
       
-      // Custom add with specific quantity
-      const addWithQuantity = async () => {
-        try {
-          const response = await axios.post(
-            `${url}/api/cart/add`,
-            { 
-              item_id: product.id,
-              quantity: quantity
-            },
-            { 
-              headers: { 
-                'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                'Content-Type': 'application/json'
-              } 
-            }
-          );
+      if (response.data.success) {
+        const productData = response.data.data;
+        setProduct(productData);
+        
+        // Initialize quantity to minimum order quantity or 1
+        const initialQty = productData.min_order_quantity || 1;
+        setQuantity(productData.is_loose ? 
+          parseFloat(initialQty) : 
+          parseInt(initialQty));
+        
+        // Generate quantity options
+        if (productData.is_loose) {
+          const min = parseFloat(productData.min_order_quantity);
+          const step = parseFloat(productData.increment_step);
+          const max = Math.min(parseFloat(productData.stock_quantity), 1000);
           
-          if (response.data.success) {
-            toast.success(`Added ${quantity} ${product.unit} of ${product.name} to cart!`);
-            // Update local cart context
-            addToCart(product.id);
-          } else {
-            toast.error(response.data.message || 'Failed to add to cart');
+          let currentQty = min;
+          const options = [];
+          
+          while (currentQty <= max) {
+            options.push({
+              value: currentQty,
+              label: `${currentQty} ${productData.unit}`
+            });
+            currentQty = parseFloat((currentQty + step).toFixed(2));
           }
-        } catch (err) {
-          toast.error(err.response?.data?.message || 'Error adding to cart');
+          
+          setQuantityOptions(options);
+        } else {
+          const max = Math.min(parseInt(productData.stock_quantity), 100);
+          const options = Array.from({ length: max }, (_, i) => ({
+            value: i + 1,
+            label: `${i + 1} ${productData.unit}`
+          }));
+          setQuantityOptions(options);
         }
-      };
-      
-      addWithQuantity();
+      } else {
+        setError('Failed to fetch product details');
+      }
     } catch (err) {
-      toast.error('Failed to add item to cart');
+      console.error('Error fetching product details:', err);
+      setError('Error loading product details');
+    } finally {
+      setLoading(false);
     }
   };
   
-  if (loading) {
-    return <div className="product-detail-loading">Loading product details...</div>;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    fetchItemDetails();
+  }, [url, itemId]);
+  
+  const handleQuantityChange = (e) => {
+  if (!product) return;
+  
+  let newValue;
+  if (product.is_loose) {
+    newValue = parseFloat(parseFloat(e.target.value).toFixed(2));
+  } else {
+    newValue = parseInt(e.target.value);
+  }
+  
+  if (isNaN(newValue)) {
+    newValue = product.is_loose ? 
+      parseFloat(product.min_order_quantity || 1) : 
+      parseInt(product.min_order_quantity || 1);
+  }
+  
+  const min = parseFloat(product.min_order_quantity || 1);
+  const max = maxAllowedQuantity;
+  
+  // Ensure the value is within bounds
+  if (newValue < min) newValue = min;
+  if (newValue > max) newValue = max;
+  
+  // For loose items, ensure it follows the increment step
+  if (product.is_loose && product.increment_step) {
+    const step = parseFloat(product.increment_step);
+    const minQty = parseFloat(product.min_order_quantity || 0);
+    
+    // Check if the difference from min quantity is a multiple of the step
+    const diff = newValue - minQty;
+    const remainder = diff % step;
+    
+    if (remainder !== 0) {
+      // Round to the nearest valid step
+      newValue = minQty + Math.round(diff / step) * step;
+      // Ensure we're still within bounds after rounding
+      if (newValue > max) newValue = max;
+      if (newValue < min) newValue = min;
+    }
+  }
+  
+  // Format the value properly
+  const formattedValue = product.is_loose ? 
+    parseFloat(newValue.toFixed(2)) : 
+    parseInt(newValue);
+  
+  setQuantity(formattedValue);
+};
+  
+ const handleAddToCart = async () => {
+  if (!product || product.stock_quantity <= 0) return;
+  
+  try {
+    setIsAddingToCart(true);
+    
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error("Please login to add items to cart");
+      navigate('/login');
+      return;
+    }
+    
+    // Send request directly to the API
+    const response = await axios.post(
+      `${url}/api/cart/add`,
+      { 
+        item_id: product.id,
+        quantity: quantity
+      },
+      { 
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        } 
+      }
+    );
+    
+    if (response.data.success) {
+      // Update context after successful API call
+      addToCart(product.id, quantity);
+      toast.success(`${quantity} ${product.unit || 'item(s)'} of ${product.name} added to cart!`);
+    } else {
+      toast.error(response.data.message || 'Failed to add to cart');
+    }
+  } catch (err) {
+    console.error('Add to cart error:', err);
+    toast.error(err.response?.data?.message || 'Error adding to cart');
+  } finally {
+    setIsAddingToCart(false);
+  }
+};
+  
+  if (loading && !product) {
+    return (
+      <div className="product-detail-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading product details...</p>
+      </div>
+    );
   }
   
   if (error) {
-    return <div className="product-detail-error">{error}</div>;
+    return (
+      <div className="product-detail-error">
+        <h3>Error loading product</h3>
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>Try Again</button>
+      </div>
+    );
   }
   
   if (!product) {
-    return <div className="product-detail-error">Product not found</div>;
+    return (
+      <div className="product-detail-error">
+        <h3>Product not found</h3>
+        <p>The requested product could not be found.</p>
+        <button onClick={() => navigate('/products')}>Browse Products</button>
+      </div>
+    );
   }
   
+  const currentCartQuantity = cartItems[product.id] || 0;
+  const maxAllowedQuantity = Math.max(0, product.stock_quantity - currentCartQuantity);
+  const canAddToCart = maxAllowedQuantity > 0 && quantity > 0;
+
   return (
     <div className="product-detail-container">
       <div className="product-detail-navigation">
-        <button className="back-button" onClick={() => navigate(-1)}>
-          &larr; Back to Products
+        <button onClick={() => navigate(-1)} className="back-button">
+          ← Back to Products
         </button>
       </div>
       
-      <div className="product-detail-content">
-        <div className="product-detail-image">
-          <img src={product.image} alt={product.name} />
-        </div>
-        
-        <div className="product-detail-info">
-          <h1 className="product-name">{product.name}</h1>
-          
-          <div className="product-meta">
-            <span className="product-category">{product.category}</span>
-            {product.weight_value && (
-              <span className="product-weight">
-                {product.weight_value}{product.weight_unit}
-              </span>
-            )}
-          </div>
-          
-          <div className="product-price">
-            LKR {parseFloat(product.selling_price || product.cost_price).toFixed(2)}
-          </div>
-          
-          <div className="product-description">
-            <h3>Description</h3>
-            <p>{product.description || 'No description available for this product.'}</p>
-          </div>
-          
-          <div className="product-actions">
-            <div className="quantity-selector">
-              <label htmlFor="quantity">Quantity:</label>
-              <select 
-                id="quantity" 
-                value={quantity}
-                onChange={handleQuantityChange}
-              >
-                {quantityOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            <button 
-              className="add-to-cart-button"
-              onClick={handleAddToCart}
-              disabled={product.stock_quantity <= 0}
-            >
-              {product.stock_quantity <= 0 ? 'Out of Stock' : 'Add to Cart'}
-            </button>
-          </div>
-          
-          <div className="product-stock-info">
-            <span className={`stock-status ${product.stock_quantity > 0 ? 'in-stock' : 'out-of-stock'}`}>
-              {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
-            </span>
-            
-            {product.is_loose && (
-              <div className="ordering-info">
-                <p>Minimum order: {product.min_order_quantity} {product.unit}</p>
-                <p>Increments: {product.increment_step} {product.unit}</p>
+      <div className="product-detail">
+        <div className="product-detail-content">
+          <div className="product-detail-image">
+            {product.image ? (
+              <img 
+                src={product.image} 
+                alt={product.name} 
+                className="product-image"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/images/placeholder.jpg';
+                }}
+              />
+            ) : (
+              <div className="image-placeholder">
+                <span>No image available</span>
               </div>
             )}
+          </div>
+          
+          <div className="product-detail-info">
+            <div className="product-header">
+              <h1 className="product-name">{product.name}</h1>
+              <div className="product-meta">
+                <span className="product-category">{product.category}</span>
+                {product.weight_value && (
+                  <span className="product-weight">
+                    {product.weight_value} {product.weight_unit}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div className="product-price-section">
+              <span className="product-price">
+                LKR {parseFloat(product.selling_price).toFixed(2)}
+              </span>
+            </div>
+            
+            <div className="product-description">
+              <h3>Description</h3>
+              <p>{product.description || 'No description available'}</p>
+            </div>
+            
+            <div className="product-actions">
+              <div className="quantity-control">
+                <label htmlFor="quantity">Quantity:</label>
+                <div className="quantity-input-group">                  <button 
+                    type="button" 
+                    className="quantity-btn decrease"
+                    onClick={() => {
+                      if (!product) return;
+                      
+                      let newValue;
+                      if (product.is_loose) {
+                        const step = parseFloat(product.increment_step || 0.1);
+                        newValue = parseFloat((quantity - step).toFixed(2));
+                        
+                        // Ensure decrement follows the valid increments based on min and step
+                        const min = parseFloat(product.min_order_quantity || 1);
+                        const diff = newValue - min;
+                        
+                        // If below min, set to min. Otherwise, ensure it's on a valid step
+                        if (newValue < min) {
+                          newValue = min;
+                        } else if (diff % step !== 0) {
+                          // Round down to nearest valid step
+                          newValue = min + Math.floor(diff / step) * step;
+                        }
+                      } else {
+                        newValue = quantity - 1;
+                      }
+                      
+                      const min = parseFloat(product.min_order_quantity || 1);
+                      newValue = Math.max(min, newValue);
+                      
+                      setQuantity(newValue);
+                    }}
+                    disabled={quantity <= (product.min_order_quantity || 1)}
+                  >
+                    -
+                  </button>
+                  
+                  <input
+                    type="number"
+                    id="quantity"
+                    className="quantity-input"
+                    value={quantity}
+                    onChange={handleQuantityChange}
+                    min={product.min_order_quantity || 1}
+                    max={maxAllowedQuantity}
+                    step={product.is_loose ? (product.increment_step || 0.1) : 1}
+                  />
+                    <button 
+                    type="button" 
+                    className="quantity-btn increase"
+                    onClick={() => {
+                      if (!product) return;
+                      
+                      let newValue;
+                      if (product.is_loose) {
+                        const step = parseFloat(product.increment_step || 0.1);
+                        const min = parseFloat(product.min_order_quantity || 1);
+                        
+                        // Calculate the next step increment
+                        newValue = parseFloat((quantity + step).toFixed(2));
+                        
+                        // Ensure increment follows the valid increments
+                        const diff = newValue - min;
+                        
+                        // If it's not a multiple of the step size, adjust to the nearest valid value
+                        if (diff % step !== 0) {
+                          newValue = min + Math.round(diff / step) * step;
+                          newValue = parseFloat(newValue.toFixed(2)); // Fix floating point precision issues
+                        }
+                      } else {
+                        newValue = quantity + 1;
+                      }
+                      
+                      const max = maxAllowedQuantity;
+                      newValue = Math.min(max, newValue);
+                      
+                      setQuantity(newValue);
+                    }}
+                    disabled={quantity >= maxAllowedQuantity}
+                  >
+                    +
+                  </button>
+                </div>
+                {currentCartQuantity > 0 && (
+                  <div className="cart-quantity-info">
+                    {currentCartQuantity} in cart ({maxAllowedQuantity} available)
+                  </div>
+                )}
+              </div>
+              
+              <button 
+                className={`add-to-cart-button ${!canAddToCart ? 'disabled' : ''}`}
+                onClick={handleAddToCart}
+                disabled={!canAddToCart || isAddingToCart}
+              >
+                {isAddingToCart ? (
+                  <span className="spinner"></span>
+                ) : product.stock_quantity <= 0 ? (
+                  'Out of Stock'
+                ) : (
+                  'Add to Cart'
+                )}
+              </button>
+            </div>
+            
+            <div className="product-stock-info">
+              <span className={`stock-status ${product.stock_quantity > 0 ? 'in-stock' : 'out-of-stock'}`}>
+                {product.stock_quantity > 0 ? 
+                  `In Stock (${product.stock_quantity} ${product.unit} available)` : 
+                  'Out of Stock'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
       
-      {/* Reviews Section */}
       <div className="product-reviews-container">
-  {error ? (
-    <div className="review-error-message">
-      <h3>Reviews Unavailable</h3>
-      <p>Sorry, we could not load the reviews for this product.</p>
-    </div>
-  ) : (
-    <React.Suspense fallback={<div>Loading reviews...</div>}>
-      <ErrorBoundary fallback={
-        <div className="review-error-fallback">
-          <h3>Something went wrong</h3>
-          <p>There was a problem loading the reviews.</p>
-          <button onClick={() => window.location.reload()}>Try Again</button>
-        </div>
-      }>
-        <ReviewSection itemId={itemId} />
-      </ErrorBoundary>
-    </React.Suspense>
-  )}
-</div>
+        <h2 className="reviews-title">Customer Reviews</h2>
+        <React.Suspense fallback={<div className="loading-reviews">Loading reviews...</div>}>
+          <ErrorBoundary fallback={
+            <div className="review-error-fallback">
+              <h3>Something went wrong</h3>
+              <p>There was a problem loading the reviews.</p>
+              <button onClick={() => window.location.reload()}>Try Again</button>
+            </div>
+          }>
+            <ReviewSection itemId={itemId} />
+          </ErrorBoundary>
+        </React.Suspense>
+      </div>
     </div>
   );
 };

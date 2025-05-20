@@ -1,9 +1,12 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import './Sidebar.css'
 import assets from '../../assets/assets'
 import { NavLink } from 'react-router-dom'
+import { AdminAuthContext } from '../../context/AdminAuthContext'
 
 const Sidebar = () => {
+  const { hasRole } = useContext(AdminAuthContext);
+
   return (
     <div className='sidebar'>
       <div className="sidebar-options">
@@ -35,6 +38,14 @@ const Sidebar = () => {
           <img src={assets.grn_icon} alt=''/>
           <p>GRN</p>
         </NavLink>
+        
+        {/* Only show User Management for admin and owner roles */}
+        {hasRole('admin') && (
+          <NavLink to='/employee-management' className="sidebar-option">
+            <img src={assets.user_icon || assets.add_icon} alt=''/>
+            <p>User Management</p>
+          </NavLink>
+        )}
       </div>
     </div>
   )
