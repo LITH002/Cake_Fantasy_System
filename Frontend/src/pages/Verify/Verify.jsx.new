@@ -53,48 +53,48 @@ const Verify = () => {
     }, [orderId, success, verifyPayment]);
 
     const handleViewOrders = () => {
-        // Ensure we stay in the customer frontend by using fully qualified URL
-        window.location.href = "http://localhost:5173/myorders";
+        // Navigate to customer's order page - not admin
+        window.location.href = "/myorders";
     };
 
     const handleGoHome = () => {
-        // Navigate to customer's home page with absolute URL
-        window.location.href = "http://localhost:5173/";
+        // Navigate to customer's home page - not admin
+        window.location.href = "/";
     };
 
     const handleShopMore = () => {
-        // Navigate to customer's product listing page with absolute URL
-        window.location.href = "http://localhost:5173/viewitems";
+        // Navigate to customer's product listing page - not admin
+        window.location.href = "/viewitems";
     };
 
-    return (
-        <div className='verify'>
-            {loading ? (
-                <div className="verify-container">
-                    <div className="spinner"></div>
-                    <p className="loading-text">Verifying your payment...</p>
+  return (
+    <div className='verify'>
+        {loading ? (
+            <div className="verify-container">
+                <div className="spinner"></div>
+                <p className="loading-text">Verifying your payment...</p>
+            </div>
+        ) : (
+            <div className="payment-status">
+                <div className={`status-icon ${verificationStatus.isVerified ? 'success' : 'failure'}`}>
+                    {verificationStatus.isVerified ? '✓' : '✗'}
                 </div>
-            ) : (
-                <div className="payment-status">
-                    <div className={`status-icon ${verificationStatus.isVerified ? 'success' : 'failure'}`}>
-                        {verificationStatus.isVerified ? '✓' : '✗'}
-                    </div>
-                    <h2>{verificationStatus.isVerified ? 'Payment Successful!' : 'Payment Issue'}</h2>
-                    <p>{verificationStatus.message}</p>
-                    <div className="action-buttons">
-                        {verificationStatus.isVerified ? (
-                            <>
-                                <button className="view-orders-btn" onClick={handleViewOrders}>View My Orders</button>
-                                <button className="shop-more-btn" onClick={handleShopMore}>Continue Shopping</button>
-                            </>
-                        ) : (
-                            <button className="go-home-btn" onClick={handleGoHome}>Return to Home</button>
-                        )}
-                    </div>
+                <h2>{verificationStatus.isVerified ? 'Payment Successful!' : 'Payment Issue'}</h2>
+                <p>{verificationStatus.message}</p>
+                <div className="action-buttons">
+                    {verificationStatus.isVerified ? (
+                        <>
+                            <button className="view-orders-btn" onClick={handleViewOrders}>View My Orders</button>
+                            <button className="shop-more-btn" onClick={handleShopMore}>Continue Shopping</button>
+                        </>
+                    ) : (
+                        <button className="go-home-btn" onClick={handleGoHome}>Return to Home</button>
+                    )}
                 </div>
-            )}
-        </div>
-    )
+            </div>
+        )}
+    </div>
+  )
 }
 
 export default Verify

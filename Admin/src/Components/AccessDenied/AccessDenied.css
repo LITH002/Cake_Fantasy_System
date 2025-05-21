@@ -32,4 +32,20 @@
 .access-denied .small {
   color: #777;
   font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.access-denied .back-button {
+  background-color: #591b0d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.access-denied .back-button:hover {
+  background-color: #7a2917;
 }

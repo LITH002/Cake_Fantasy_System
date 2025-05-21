@@ -1,16 +1,110 @@
 .verify {
     min-height: 60vh;
     display: grid;
+    padding: 2rem;
+}
+
+.verify-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    place-self: center;
+    gap: 1rem;
 }
 
 .verify .spinner {
     width: 100px;
     height: 100px;
-    place-self: center;
     border: 5px solid #bdbdbd;
     border-top-color: #591b0d;
     border-radius: 50%;
     animation: rotate 1s infinite;
+}
+
+.loading-text {
+    font-size: 1.1rem;
+    color: #591b0d;
+}
+
+.payment-status {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    place-self: center;
+}
+
+.status-icon {
+    font-size: 3rem;
+    height: 80px;
+    width: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.status-icon.success {
+    background-color: #e6f7e6;
+    color: #28a745;
+    border: 2px solid #28a745;
+}
+
+.status-icon.failure {
+    background-color: #fde8e8;
+    color: #dc3545;
+    border: 2px solid #dc3545;
+}
+
+.payment-status h2 {
+    margin-bottom: 1rem;
+    color: #591b0d;
+}
+
+.payment-status p {
+    margin-bottom: 2rem;
+    color: #555;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.view-orders-btn, .go-home-btn, .shop-more-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.view-orders-btn {
+    background-color: #591b0d;
+    color: white;
+}
+
+.shop-more-btn {
+    background-color: #e6a15c;
+    color: white;
+}
+
+.go-home-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.view-orders-btn:hover, .shop-more-btn:hover, .go-home-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
 @keyframes rotate {

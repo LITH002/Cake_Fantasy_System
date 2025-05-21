@@ -31,9 +31,9 @@ const Add = ({url}) => {
   });
 
   // Check if user has admin privileges
-  if (!hasRole('admin')) {
-    return <AccessDenied />;
-  }
+  // if (!hasRole('admin')) {
+  //   return <AccessDenied />;
+  // }
 
   const onChangeHandler = (event) => {
     const name = event.target.name;

@@ -7,6 +7,7 @@ export const AdminAuthProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   // Check if user is already logged in on component mount
   useEffect(() => {
@@ -14,9 +15,24 @@ export const AdminAuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('adminUser');
     
     if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        console.log('Restoring session:', { 
+          token: storedToken ? `${storedToken.substring(0, 10)}...` : 'none',
+          user: parsedUser ? parsedUser.username : 'none' 
+        });
+        setToken(storedToken);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        // Clear invalid storage data
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        setAuthError('Invalid session data');
+      }
+    } else {
+      console.log('No stored session found');
     }
     
     setLoading(false);
@@ -24,16 +40,23 @@ export const AdminAuthProvider = ({ children }) => {
 
   // Login function
   const login = (newToken, userData) => {
+    console.log('Login successful:', { 
+      user: userData.username,
+      role: userData.role
+    });
+    
     localStorage.setItem('adminToken', newToken);
     localStorage.setItem('adminUser', JSON.stringify(userData));
     
     setToken(newToken);
     setUser(userData);
     setIsAuthenticated(true);
+    setAuthError(null);
   };
 
   // Logout function
   const logout = () => {
+    console.log('Logging out user:', user?.username);
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
     
@@ -41,6 +64,7 @@ export const AdminAuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthenticated(false);
   };
+  
   // Check if user has required role
   const hasRole = (requiredRole) => {
     if (!user) return false;
@@ -64,6 +88,7 @@ export const AdminAuthProvider = ({ children }) => {
     token,
     user,
     loading,
+    authError,
     login,
     logout,
     hasRole
