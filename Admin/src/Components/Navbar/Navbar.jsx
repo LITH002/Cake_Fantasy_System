@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import './Navbar.css';
 import { assets } from '../../assets/assets';
 import { AdminAuthContext } from '../../context/AdminAuthContext';
@@ -17,6 +17,20 @@ const Navbar = () => {
   const toggleDropdown = () => {
     setShowDropdown(!showDropdown);
   };
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && !event.target.closest('.dropdown')) {
+        setShowDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   return (
     <div className='navbar'>
@@ -32,7 +46,7 @@ const Navbar = () => {
           </div>
           
           <div className="dropdown">
-            <button className="dropdown-toggle" onClick={toggleDropdown}>
+            <button className="dropdown-toggle" onClick={toggleDropdown} aria-label="User menu">
               <span className="arrow-down"></span>
             </button>
             

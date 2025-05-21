@@ -15,8 +15,7 @@ const List = ({url}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  const { token, hasRole } = useContext(AdminAuthContext);
-  const fetchList = useCallback(async () => {
+  const { token, hasRole } = useContext(AdminAuthContext);  const fetchList = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -33,7 +32,9 @@ const List = ({url}) => {
       const response = await axios.get(`${url}/api/item/list`, {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        // Adding timeout to prevent indefinite loading
+        timeout: 10000 
       });
       
       console.log("API response received:", response.status);
@@ -48,7 +49,27 @@ const List = ({url}) => {
       }
     } catch (error) {
       console.error("Error fetching items:", error);
-      const errorMessage = error.response?.data?.message || error.message || "Error loading items";
+      let errorMessage;
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+        
+        if (error.response.status === 401) {
+          errorMessage = "Your session has expired. Please login again.";
+          // Optionally, redirect to login or clear auth state
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = "No response from server. Please check your connection.";
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

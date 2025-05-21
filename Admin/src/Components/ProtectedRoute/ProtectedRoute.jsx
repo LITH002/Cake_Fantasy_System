@@ -9,7 +9,17 @@ const ProtectedRoute = ({ children, requiredRole = 'employee' }) => {
   
   // Show loading state
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return (
+      <div className="loading-container" style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
   }
   
   // Redirect to login if not authenticated
