@@ -2,8 +2,9 @@ import React, { useContext } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AdminAuthContext } from '../../context/AdminAuthContext';
 import { toast } from 'react-toastify';
+import AccessDenied from '../AccessDenied/AccessDenied';
 
-const ProtectedRoute = ({ children, requiredRole = 'admin' }) => {
+const ProtectedRoute = ({ children, requiredRole = 'employee' }) => {
   const { isAuthenticated, hasRole, loading } = useContext(AdminAuthContext);
   
   // Show loading state
@@ -19,7 +20,7 @@ const ProtectedRoute = ({ children, requiredRole = 'admin' }) => {
   // Check role permissions
   if (!hasRole(requiredRole)) {
     toast.error("You don't have permission to access this page");
-    return <Navigate to="/list" replace />;
+    return <AccessDenied />;
   }
   
   // If authenticated and has required role, render the children

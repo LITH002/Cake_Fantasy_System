@@ -49,26 +49,27 @@ const AppRoutes = () => {
         isAuthenticated ? <Navigate to="/list" replace /> : <Login url={url} />
       } />
       
-      {/* Default route */}
       <Route path="/" element={
-        isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
-      } />
+  isAuthenticated ? <Navigate to="/list" replace /> : <Navigate to="/login" replace />
+} />
 
-      <Route path="/dashboard" element={
-        <ProtectedRoute requiredRole="employee">
-          <AdminLayout>
-            <Dashboard url={url} />
-          </AdminLayout>
-        </ProtectedRoute>
-      } />
+// Update dashboard route to admin-only:
+<Route path="/dashboard" element={
+  <ProtectedRoute requiredRole="admin">
+    <AdminLayout>
+      <Dashboard url={url} />
+    </AdminLayout>
+  </ProtectedRoute>
+} />
 
-      <Route path="/reports" element={
-        <ProtectedRoute requiredRole="employee">
-          <AdminLayout>
-            <Reports url={url} />
-          </AdminLayout>
-        </ProtectedRoute>
-      } />
+// Update reports route to admin-only:
+<Route path="/reports" element={
+  <ProtectedRoute requiredRole="admin">
+    <AdminLayout>
+      <Reports url={url} />
+    </AdminLayout>
+  </ProtectedRoute>
+} />
       
       {/* Protected routes */}
       <Route path="/list" element={
@@ -80,17 +81,17 @@ const AppRoutes = () => {
       } />
       
       <Route path="/add" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminLayout>
-            <Add url={url} />
-          </AdminLayout>
-        </ProtectedRoute>
-      } />
+  <ProtectedRoute requiredRole="employee">
+    <AdminLayout>
+      <Add url={url} />
+    </AdminLayout>
+  </ProtectedRoute>
+} />
 
       <Route 
         path="/item-barcode/:itemId" 
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="employee">
             <ItemBarcode url={url} />
           </ProtectedRoute>
         } 
@@ -99,7 +100,7 @@ const AppRoutes = () => {
       <Route 
         path="/bulk-barcode" 
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="employee">
             <BulkBarcodePrint url={url} />
           </ProtectedRoute>
         } 
@@ -130,13 +131,12 @@ const AppRoutes = () => {
       } />
 
       <Route path="/suppliers" element={
-        <ProtectedRoute requiredRole="employee">
-          <AdminLayout>
-            <SupplierList url={url} />
-          </AdminLayout>
-        </ProtectedRoute>
-      } />
-
+  <ProtectedRoute requiredRole="admin">
+    <AdminLayout>
+      <SupplierList url={url} />
+    </AdminLayout>
+  </ProtectedRoute>
+} />
       <Route path="/add-supplier" element={
         <ProtectedRoute requiredRole="employee">
           <AdminLayout>

@@ -335,30 +335,49 @@
 }
 
 .dashboard-product-image {
-  height: 150px;
+  height: 80px;  /* Reduce from 150px */
+  width: 80px;   /* Add width constraint */
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
 }
 
 .dashboard-product-image img {
-  width: 100%;
+ width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 4px;  /* Add rounded corners like inventory thumbnails */
+  border: 1px solid #eee;
 }
 
+.dashboard-product-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;  /* Change to horizontal layout */
+  align-items: center;
+  padding: 10px;
+}
+
+
 .dashboard-product-info {
-  padding: 15px;
+  flex: 1;
+  padding: 0 10px;
 }
 
 .dashboard-product-info h3 {
   margin: 0 0 5px 0;
-  font-size: 16px;
+  font-size: 14px;  /* Reduce font size */
   color: #333;
 }
 
 .dashboard-product-category {
   color: #666;
-  font-size: 14px;
-  margin: 0 0 10px 0;
+  font-size: 12px;  /* Reduce font size */
+  margin: 0 0 8px 0;
 }
 
 .dashboard-product-stats {
@@ -372,14 +391,21 @@
 }
 
 .dashboard-stat-label {
-  font-size: 12px;
+  font-size: 10px;  /* Reduce font size */
   color: #888;
 }
 
 .dashboard-stat-value {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;  /* Reduce font size */
   color: #333;
+}
+
+/* Make the top products grid more compact */
+.dashboard-top-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));  /* Reduce minimum width */
+  gap: 12px;  /* Reduce gap */
 }
 
 /* Loading & Error States */
