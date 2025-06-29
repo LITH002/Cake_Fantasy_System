@@ -51,28 +51,27 @@ const AppRoutes = () => {
       <Route path="/login" element={
         isAuthenticated ? <Navigate to="/list" replace /> : <Login url={url} />
       } />
-      
-      <Route path="/" element={
+        <Route path="/" element={
         isAuthenticated ? <Navigate to="/list" replace /> : <Navigate to="/login" replace />
       } />
 
-// Update dashboard route to admin-only:
-<Route path="/dashboard" element={
-  <ProtectedRoute requiredRole="admin">
-    <AdminLayout>
-      <Dashboard url={url} />
-    </AdminLayout>
-  </ProtectedRoute>
-} />
+      {/* Dashboard route - admin only */}
+      <Route path="/dashboard" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminLayout>
+            <Dashboard url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
 
-// Update reports route to admin-only:
-<Route path="/reports" element={
-  <ProtectedRoute requiredRole="admin">
-    <AdminLayout>
-      <Reports url={url} />
-    </AdminLayout>
-  </ProtectedRoute>
-} />
+      {/* Reports route - admin only */}
+      <Route path="/reports" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminLayout>
+            <Reports url={url} />
+          </AdminLayout>
+        </ProtectedRoute>
+      } />
       
       {/* Protected routes */}
       <Route path="/list" element={
