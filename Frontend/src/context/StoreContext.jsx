@@ -189,6 +189,7 @@ const StoreContextProvider = (props) => {
     console.log(`Total cart amount: ${totalAmount}`);
     return totalAmount;
   };
+  
   const fetchItemList = async () => {
     try {
       const response = await axios.get(url + "/api/item/list");

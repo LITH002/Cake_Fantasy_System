@@ -151,7 +151,6 @@ const Order = {
       connection.release();
     }
   },
-
   // Get cart items for user
   getCart: async (userId) => {
     try {
@@ -169,6 +168,7 @@ const Order = {
           i.id,
           i.name,
           i.image,
+          i.selling_price,
           i.selling_price as price,
           oi.quantity,
           (i.selling_price * oi.quantity) as total_price
@@ -177,6 +177,7 @@ const Order = {
         WHERE oi.order_id = ?
       `, [order[0].id]);
       
+      console.log(`Retrieved cart items for user ${userId}:`, JSON.stringify(items));
       return items;
     } catch (error) {
       throw error;
@@ -210,14 +211,29 @@ const Order = {
     try {
       await connection.beginTransaction();
       
+      // DEBUG: Log incoming items structure
+      console.log(`Create order - incoming items:`, JSON.stringify(items));
+      
       // Ensure amount is a valid number
       const validAmount = parseFloat(amount);
       if (isNaN(validAmount) || validAmount <= 0) {
         // Calculate the total from items if amount is invalid
         let calculatedAmount = 0;
         for (const item of items) {
-          if (item.price && item.quantity) {
-            calculatedAmount += parseFloat(item.price) * parseFloat(item.quantity);
+          let itemPrice = 0;
+          if (item.selling_price !== undefined) {
+            itemPrice = parseFloat(item.selling_price);
+          } else if (item.price !== undefined) {
+            itemPrice = parseFloat(item.price);
+          }
+          
+          const quantity = parseInt(item.quantity || 1);
+          
+          if (!isNaN(itemPrice) && itemPrice > 0 && !isNaN(quantity) && quantity > 0) {
+            calculatedAmount += itemPrice * quantity;
+            console.log(`Added ${itemPrice} * ${quantity} = ${itemPrice * quantity} to total`);
+          } else {
+            console.warn(`Skipping item with invalid price/quantity: price=${itemPrice}, quantity=${quantity}`);
           }
         }
         
@@ -254,12 +270,19 @@ const Order = {
       );
       
       const orderId = orderResult.insertId;
-      console.log(`Created order #${orderId}, now adding items`);
-        // Add order items - catching errors for individual items
+      console.log(`Created order #${orderId}, now adding items`);      // Add order items - catching errors for individual items
       for (const item of items) {
         try {
           // Ensure item has a valid price
-          let itemPrice = parseFloat(item.price);
+          let itemPrice = null;
+          
+          // Try different price properties based on data structure
+          if (item.selling_price !== undefined) {
+            itemPrice = parseFloat(item.selling_price);
+          } else if (item.price !== undefined) {
+            itemPrice = parseFloat(item.price);
+          }
+          
           if (isNaN(itemPrice) || itemPrice <= 0) {
             // Fetch the price from the database if it's not valid in the request
             const [priceResult] = await connection.query(
@@ -276,14 +299,16 @@ const Order = {
             }
           }
           
-          console.log(`Adding item #${item.id} x${item.quantity} at price ${itemPrice} to order #${orderId}`);
+          const quantity = parseInt(item.quantity || 1);
+          
+          console.log(`Adding item #${item.id} x${quantity} at price ${itemPrice} to order #${orderId}`);
           await connection.query(
             `INSERT INTO order_items (order_id, item_id, quantity, price) 
              VALUES (?, ?, ?, ?)`,
             [
               orderId,
               item.id,
-              item.quantity,
+              quantity,
               itemPrice
             ]
           );
